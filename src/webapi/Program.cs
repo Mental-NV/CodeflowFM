@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.EntityFrameworkCore;
@@ -32,9 +33,13 @@ builder.Services.Configure<StationCatalogOptions>(builder.Configuration.GetSecti
 builder.Services.Configure<MetadataOptions>(builder.Configuration.GetSection(MetadataOptions.SectionName));
 builder.Services.Configure<GoogleIdentityOptions>(builder.Configuration.GetSection(GoogleIdentityOptions.SectionName));
 
+var defaultConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+defaultConnectionString = NormalizeSqliteConnectionString(defaultConnectionString, builder.Environment.ContentRootPath);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlite(defaultConnectionString);
 });
 
 builder.Services.AddCors(options =>
@@ -150,5 +155,30 @@ api.MapGet("/health", async (HealthCheckService healthChecks, CancellationToken 
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+static string NormalizeSqliteConnectionString(string connectionString, string contentRootPath)
+{
+    var builder = new SqliteConnectionStringBuilder(connectionString);
+    var dataSource = builder.DataSource;
+
+    if (string.IsNullOrWhiteSpace(dataSource) ||
+        string.Equals(dataSource, ":memory:", StringComparison.OrdinalIgnoreCase))
+    {
+        return builder.ToString();
+    }
+
+    var normalizedPath = Path.IsPathRooted(dataSource)
+        ? dataSource
+        : Path.GetFullPath(Path.Combine(contentRootPath, dataSource));
+
+    var directoryPath = Path.GetDirectoryName(normalizedPath);
+    if (!string.IsNullOrWhiteSpace(directoryPath))
+    {
+        Directory.CreateDirectory(directoryPath);
+    }
+
+    builder.DataSource = normalizedPath;
+    return builder.ToString();
+}
 
 public partial class Program;

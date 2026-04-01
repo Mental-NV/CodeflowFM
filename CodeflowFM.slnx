@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/webapi/webapi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CodeflowFM.Tests/CodeflowFM.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,261 @@
+{
+  "StationCatalog": {
+    "Stations": [
+      {
+        "key": "ambient",
+        "name": "Ambient",
+        "descriptor": "Quiet concentration",
+        "description": "Calm atmospheric sound for deep focus.",
+        "streamUrl": "/media/stations/ambient.mp3",
+        "accentColor": "#4DA3FF",
+        "secondaryAccentColor": "#7C88FF",
+        "mood": "Low glow",
+        "sortOrder": 1,
+        "isActive": true,
+        "tracks": [
+          { "title": "Threaded Light", "artist": "North Array", "durationSeconds": 280 },
+          { "title": "Blue Compile", "artist": "Signal House", "durationSeconds": 260 },
+          { "title": "Still Runtime", "artist": "Nocturne Stack", "durationSeconds": 300 }
+        ]
+      },
+      {
+        "key": "chillhop",
+        "name": "Chillhop",
+        "descriptor": "Relaxed momentum",
+        "description": "Steady beats and soft keys for warm coding sessions.",
+        "streamUrl": "/media/stations/chillhop.mp3",
+        "accentColor": "#59E1D9",
+        "secondaryAccentColor": "#4DA3FF",
+        "mood": "Soft groove",
+        "sortOrder": 2,
+        "isActive": true,
+        "tracks": [
+          { "title": "Late Merge", "artist": "Quiet Sprint", "durationSeconds": 240 },
+          { "title": "Night Branch", "artist": "Loop District", "durationSeconds": 250 },
+          { "title": "Soft Cache", "artist": "Analog Pointer", "durationSeconds": 235 }
+        ]
+      },
+      {
+        "key": "chillout",
+        "name": "Chillout",
+        "descriptor": "Smooth focus",
+        "description": "Polished downtempo for steady, uninterrupted work.",
+        "streamUrl": "/media/stations/chillout.mp3",
+        "accentColor": "#68B5FF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Clear glide",
+        "sortOrder": 3,
+        "isActive": true,
+        "tracks": [
+          { "title": "Waveform View", "artist": "Quiet Signal", "durationSeconds": 310 },
+          { "title": "Glass Terminal", "artist": "Low Tide Logic", "durationSeconds": 295 },
+          { "title": "After Standup", "artist": "Cyan Current", "durationSeconds": 275 }
+        ]
+      },
+      {
+        "key": "chillout-dreams",
+        "name": "Chillout Dreams",
+        "descriptor": "Soft immersion",
+        "description": "Airy textures for long sessions that need less edge.",
+        "streamUrl": "/media/stations/chillout-dreams.mp3",
+        "accentColor": "#8B7CFF",
+        "secondaryAccentColor": "#4DA3FF",
+        "mood": "Haze",
+        "sortOrder": 4,
+        "isActive": true,
+        "tracks": [
+          { "title": "Quiet Orbit", "artist": "Drift Assembly", "durationSeconds": 330 },
+          { "title": "Dream State Sync", "artist": "Signal Bloom", "durationSeconds": 320 },
+          { "title": "Sleep Mode False", "artist": "Moonlit Stack", "durationSeconds": 340 }
+        ]
+      },
+      {
+        "key": "chillstep",
+        "name": "Chillstep",
+        "descriptor": "Driven calm",
+        "description": "A touch more propulsion without breaking the flow.",
+        "streamUrl": "/media/stations/chillstep.mp3",
+        "accentColor": "#7C88FF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Focused lift",
+        "sortOrder": 5,
+        "isActive": true,
+        "tracks": [
+          { "title": "Pulse Commit", "artist": "Silver Queue", "durationSeconds": 250 },
+          { "title": "Hover State", "artist": "Night Process", "durationSeconds": 260 },
+          { "title": "Gradual Ramp", "artist": "Signal Harbor", "durationSeconds": 245 }
+        ]
+      },
+      {
+        "key": "downtempo-lounge",
+        "name": "Downtempo Lounge",
+        "descriptor": "Elegant productivity",
+        "description": "Refined rhythm for calm decision-making and review work.",
+        "streamUrl": "/media/stations/downtempo-lounge.mp3",
+        "accentColor": "#59E1D9",
+        "secondaryAccentColor": "#A7D2FF",
+        "mood": "Polished",
+        "sortOrder": 6,
+        "isActive": true,
+        "tracks": [
+          { "title": "Glass Review", "artist": "Quiet Office", "durationSeconds": 285 },
+          { "title": "After Hours", "artist": "Neon Ledger", "durationSeconds": 295 },
+          { "title": "Past Midnight", "artist": "Blue Grain", "durationSeconds": 275 }
+        ]
+      },
+      {
+        "key": "future-garage",
+        "name": "Future Garage",
+        "descriptor": "Nocturnal flow",
+        "description": "Shadowed percussion and space for deep technical work.",
+        "streamUrl": "/media/stations/future-garage.mp3",
+        "accentColor": "#5AA8FF",
+        "secondaryAccentColor": "#8B7CFF",
+        "mood": "Night code",
+        "sortOrder": 7,
+        "isActive": true,
+        "tracks": [
+          { "title": "Rain on Glass", "artist": "Proxy District", "durationSeconds": 255 },
+          { "title": "Detached Headset", "artist": "Current Relay", "durationSeconds": 265 },
+          { "title": "Dark Queue", "artist": "Subsurface", "durationSeconds": 250 }
+        ]
+      },
+      {
+        "key": "lofi-hip-hop",
+        "name": "Lo-Fi Hip-Hop",
+        "descriptor": "Everyday coding",
+        "description": "Comfortable beats for daily standups, tickets, and flow.",
+        "streamUrl": "/media/stations/lofi-hip-hop.mp3",
+        "accentColor": "#7C88FF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Routine",
+        "sortOrder": 8,
+        "isActive": true,
+        "tracks": [
+          { "title": "Inbox Zero-ish", "artist": "Quiet Borough", "durationSeconds": 230 },
+          { "title": "Sticky Notes", "artist": "Mono Lane", "durationSeconds": 225 },
+          { "title": "Cached Coffee", "artist": "Warm Patch", "durationSeconds": 235 }
+        ]
+      },
+      {
+        "key": "lofi-lounge-chill",
+        "name": "Lo-Fi Lounge & Chill",
+        "descriptor": "Warm background focus",
+        "description": "A softer lounge drift for reading, writing, and review.",
+        "streamUrl": "/media/stations/lofi-lounge-chill.mp3",
+        "accentColor": "#A2C4FF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Soft desk light",
+        "sortOrder": 9,
+        "isActive": true,
+        "tracks": [
+          { "title": "Late Window", "artist": "Slow Buffer", "durationSeconds": 240 },
+          { "title": "Muted City", "artist": "Daylight Syntax", "durationSeconds": 245 },
+          { "title": "Desk Lamp", "artist": "Quiet Motion", "durationSeconds": 238 }
+        ]
+      },
+      {
+        "key": "lounge",
+        "name": "Lounge",
+        "descriptor": "Refined work mode",
+        "description": "Smooth lounge textures for composed shipping energy.",
+        "streamUrl": "/media/stations/lounge.mp3",
+        "accentColor": "#59E1D9",
+        "secondaryAccentColor": "#8B7CFF",
+        "mood": "Refined",
+        "sortOrder": 10,
+        "isActive": true,
+        "tracks": [
+          { "title": "Quiet Release", "artist": "Signal Terrace", "durationSeconds": 290 },
+          { "title": "Velvet Query", "artist": "Afterglow Array", "durationSeconds": 300 },
+          { "title": "Deskside Current", "artist": "Calm Relay", "durationSeconds": 285 }
+        ]
+      },
+      {
+        "key": "minimal",
+        "name": "Minimal",
+        "descriptor": "Clean mental space",
+        "description": "Sparse pulses for deliberate focus and technical clarity.",
+        "streamUrl": "/media/stations/minimal.mp3",
+        "accentColor": "#4DA3FF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Precise",
+        "sortOrder": 11,
+        "isActive": true,
+        "tracks": [
+          { "title": "Single Responsibility", "artist": "Low Voltage", "durationSeconds": 260 },
+          { "title": "Plain Object", "artist": "Lean Circuit", "durationSeconds": 250 },
+          { "title": "Small Surface", "artist": "Blue Syntax", "durationSeconds": 255 }
+        ]
+      },
+      {
+        "key": "psybient",
+        "name": "Psybient",
+        "descriptor": "Expansive concentration",
+        "description": "Wide, immersive sound for longer stretches of deep work.",
+        "streamUrl": "/media/stations/psybient.mp3",
+        "accentColor": "#8B7CFF",
+        "secondaryAccentColor": "#59E1D9",
+        "mood": "Wide field",
+        "sortOrder": 12,
+        "isActive": true,
+        "tracks": [
+          { "title": "Orbital Notes", "artist": "Silent Vector", "durationSeconds": 340 },
+          { "title": "Echo Array", "artist": "Coded Horizon", "durationSeconds": 360 },
+          { "title": "Distance Field", "artist": "Night Transit", "durationSeconds": 330 }
+        ]
+      },
+      {
+        "key": "psychill",
+        "name": "PsyChill",
+        "descriptor": "Creative drift",
+        "description": "Atmospheric pulses for concept work and open-ended creation.",
+        "streamUrl": "/media/stations/psychill.mp3",
+        "accentColor": "#7C88FF",
+        "secondaryAccentColor": "#4DA3FF",
+        "mood": "Creative loop",
+        "sortOrder": 13,
+        "isActive": true,
+        "tracks": [
+          { "title": "Floating Branch", "artist": "Circuit Bloom", "durationSeconds": 315 },
+          { "title": "Patch Garden", "artist": "Quiet Expedition", "durationSeconds": 325 },
+          { "title": "Inward Signal", "artist": "Glass Flora", "durationSeconds": 310 }
+        ]
+      },
+      {
+        "key": "space-music",
+        "name": "Space Music",
+        "descriptor": "Deep atmospheric work",
+        "description": "Slow cosmic ambience for long, uninterrupted immersion.",
+        "streamUrl": "/media/stations/space-music.mp3",
+        "accentColor": "#4DA3FF",
+        "secondaryAccentColor": "#A7D2FF",
+        "mood": "Orbit",
+        "sortOrder": 14,
+        "isActive": true,
+        "tracks": [
+          { "title": "Quiet Vacuum", "artist": "Signal Capsule", "durationSeconds": 380 },
+          { "title": "Deep Array", "artist": "Far Process", "durationSeconds": 360 },
+          { "title": "Blue Orbit", "artist": "Static Horizon", "durationSeconds": 370 }
+        ]
+      },
+      {
+        "key": "vocal-chillout",
+        "name": "Vocal Chillout",
+        "descriptor": "Airy motion",
+        "description": "Light vocal textures for steady momentum without overload.",
+        "streamUrl": "/media/stations/vocal-chillout.mp3",
+        "accentColor": "#59E1D9",
+        "secondaryAccentColor": "#7C88FF",
+        "mood": "Air",
+        "sortOrder": 15,
+        "isActive": true,
+        "tracks": [
+          { "title": "Quiet Echoes", "artist": "Night Chorus", "durationSeconds": 260 },
+          { "title": "Open Terminal", "artist": "Aerial Loop", "durationSeconds": 255 },
+          { "title": "Clouded Signal", "artist": "Muted Lights", "durationSeconds": 265 }
+        ]
+      }
+    ]
+  }
+}

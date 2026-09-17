@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="../src/webapi/webapi.csproj" />
-  <Project Path="CodeflowFM.Tests/CodeflowFM.Tests.csproj" />
-</Solution>

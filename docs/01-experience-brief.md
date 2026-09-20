@@ -9,7 +9,7 @@
 
 **Job to be done:** “When I start a concentration session, let me get dependable background music playing in seconds, make a small adjustment if needed, and return to my work.”
 
-**Promise:** **Pick a station. Get into your work.** The app has only two curated stations, **Future Garage** and **Lo-Fi Beats**. A listener chooses one and tunes into continuous music. The app remains quiet visually and needs little attention during a 30-minute to multi-hour session.
+**Promise:** **Pick a station. Get into your work.** The app has only two curated stations, **Future Garage** and **Lo-Fi Beats** (with future possibility to extend the list to 10+ stations). A listener chooses one and tunes into continuous music. The app remains quiet visually and needs little attention during a 30-minute to multi-hour session.
 
 | Station | Intended feel | Curation guardrail |
 | --- | --- | --- |

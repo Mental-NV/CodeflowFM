@@ -10,7 +10,7 @@ flowchart TD
     G --> H["Production application"]
 ```
 
-Do not begin by asking an image generator to design the entire application. It can produce beautiful screens without coherent navigation, reusable components, accessibility, or realistic player states. Use it to discover the app’s visual identity after you understand the experience.
+I don't recommend designing the app by asking an image generator to design the entire application. It can produce beautiful screens without coherent navigation, reusable components, accessibility, or realistic player states. Use it to discover the app’s visual identity after you understand the experience.
 
 ## Recommended workflow
 

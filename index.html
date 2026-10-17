@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#171918">
+    <meta name="description" content="Pick a station. Get into your work. Continuous background music with Codeflow FM.">
+    <title>Codeflow FM — Background radio</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./src/styles.css">
+    <script type="module" src="./src/app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <a class="brand" href="./" aria-label="Codeflow FM home">codeflow<span class="brand-fm">FM</span></a>
+        <span class="header-caption">Background radio</span>
+      </header>
+
+      <main class="main">
+        <div class="intro">
+          <p class="eyebrow">A little sound. A little space.</p>
+          <h1>Pick a station.<br><span>Get into your work.</span></h1>
+          <p class="intro-description">Continuous music for whatever needs your attention.</p>
+        </div>
+        <div class="section-heading"><h2>Stations</h2><span id="station-count"></span></div>
+        <div class="chooser-frame">
+          <div id="station-chooser" class="station-chooser" aria-label="Available stations" tabindex="0">
+            <div id="station-grid" class="station-grid"></div>
+            <p id="catalog-message" class="catalog-message" role="status">Loading stations…</p>
+            <noscript><p>Enable JavaScript to listen to the stations.</p></noscript>
+          </div>
+          <div id="chooser-scrollbar" class="chooser-scrollbar" role="scrollbar" aria-label="Scroll stations" aria-controls="station-chooser" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0" hidden><div class="scrollbar-thumb"></div></div>
+        </div>
+      </main>
+
+      <footer class="player" aria-label="Radio player">
+        <div class="now-playing">
+          <img id="player-art" class="player-art" src="./assets/future-garage.svg" alt="" hidden>
+          <div class="player-copy">
+            <p id="player-station" class="player-station">Nothing playing</p>
+            <p id="playback-status" class="playback-status" role="status" aria-live="polite">Choose a station to begin.</p>
+            <p id="track-info" class="track-info" hidden></p>
+          </div>
+        </div>
+        <button id="play-toggle" class="play-toggle" type="button" disabled aria-label="Play">
+          <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>
+          <span id="play-label">Play</span>
+        </button>
+        <div class="sound-controls">
+          <button id="mute-toggle" class="mute-toggle" type="button" aria-label="Mute" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path id="sound-waves" d="M17 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path id="sound-cross" d="m17 9 5 6m0-6-5 6" hidden/></svg>
+            <span id="mute-label">Mute</span>
+          </button>
+          <div class="volume-control">
+            <div class="volume-caption"><label for="volume">Volume</label><output id="volume-value" for="volume">70%</output></div>
+            <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
+          </div>
+        </div>
+      </footer>
+    </div>
+    <audio id="radio-audio" preload="none"></audio>
+  </body>
+</html>

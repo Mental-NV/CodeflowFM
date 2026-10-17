@@ -1,0 +1,14 @@
+{
+  "name": "codeflow-fm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small, static radio for focused work.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=22" }
+}

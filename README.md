@@ -2,7 +2,7 @@
 
 Background music listenting app. **Listen live: [https://codeflowfm.pages.dev/](https://codeflowfm.pages.dev/)**
 
-![Screen](docs\images\screen.png)
+![Screen](docs/images/screen.png)
 
 ## Run locally
 

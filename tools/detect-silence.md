@@ -18,7 +18,7 @@ node tools/detect-silence.mjs "C:\Projects\yt-downloader\Selected10G" --recursiv
 
 A threshold nearer 0 (for example, `--threshold=-40`) also detects louder quiet passages; a lower threshold (for example, `--threshold=-60`) requires quieter audio. Use `--help` for all options. The scan decodes the complete audio and can take time for a large library. Files are processed one at a time to bound resource use. Directory symlinks are not followed.
 
-Without `--output`, the report goes to stdout; progress always goes to stderr, so shell redirection also works. Output files are created exclusively: an existing report is never overwritten. JSON includes every scanned file, with `silences: []` for unaffected tracks and `error` for failed tracks. Each silence contains `startSec`, `endSec`, and `durationSec`, measured from the beginning of the decoded audio. Text reports show only affected files and errors, plus totals. Example:
+Without `--output`, the report goes to stdout; progress always goes to stderr, so shell redirection also works. Output files are created exclusively: an existing report is never overwritten. JSON includes only tracks with detected silence in `files`, and failed scans in a separate `errors` array. Summary totals cover all scanned tracks. Each silence contains `startSec`, `endSec`, and `durationSec`, measured from the beginning of the decoded audio, plus `startTime` and `endTime` in `HH:MM:SS.mmm` format. Text reports show only affected files and errors, plus totals. Use the [silence removal CLI](remove-silence.md) to apply the reported cuts. Example:
 
 ```text
 C:\Music\track.mp3

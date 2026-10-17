@@ -23,7 +23,7 @@
           <h1>Pick a station.<br><span>Get into your work.</span></h1>
           <p class="intro-description">Continuous music for whatever needs your attention.</p>
         </div>
-        <div class="section-heading"><h2>Stations</h2><span id="station-count"></span></div>
+        <div class="section-heading"><h2>Stations</h2></div>
         <div class="chooser-frame">
           <div id="station-chooser" class="station-chooser" aria-label="Available stations" tabindex="0">
             <div id="station-grid" class="station-grid"></div>
@@ -43,11 +43,11 @@
             <p id="track-info" class="track-info" hidden></p>
           </div>
         </div>
-        <button id="play-toggle" class="play-toggle" type="button" disabled aria-label="Play">
-          <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>
-          <span id="play-label">Play</span>
-        </button>
         <div class="sound-controls">
+          <button id="play-toggle" class="play-toggle" type="button" disabled aria-label="Play">
+            <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z"/></svg>
+            <span id="play-label">Play</span>
+          </button>
           <button id="mute-toggle" class="mute-toggle" type="button" aria-label="Mute" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path id="sound-waves" d="M17 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path id="sound-cross" d="m17 9 5 6m0-6-5 6" hidden/></svg>
             <span id="mute-label">Mute</span>

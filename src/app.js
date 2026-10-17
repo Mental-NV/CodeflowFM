@@ -136,7 +136,6 @@ async function loadStations() {
     }
     const selected = stations.find(station => station.id === preferences.stationId);
     if (selected) player.select(selected);
-    element('station-count').textContent = `${cards.size} ${cards.size === 1 ? 'station' : 'stations'}`;
     element('catalog-message').hidden = results.every(result => result.status === 'fulfilled');
     element('catalog-message').textContent = 'Some stations could not load. Refresh the page to try again.';
     render();

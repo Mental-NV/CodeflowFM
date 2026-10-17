@@ -47,6 +47,7 @@ compactPlayer.addEventListener('change', () => {
 setVolumePanelOpen(false);
 
 function render() {
+  const audio = player.audio;
   const station = player.station;
   const muted = audio.muted || audio.volume === 0;
   const playing = player.state === 'playing';
@@ -106,11 +107,13 @@ function render() {
 
 element('play-toggle').addEventListener('click', () => player.toggle());
 element('volume').addEventListener('input', event => {
+  const audio = player.audio;
   audio.volume = Number(event.target.value) / 100;
   if (audio.volume > 0) audio.muted = false;
   render();
 });
 element('mute-toggle').addEventListener('click', () => {
+  const audio = player.audio;
   if (audio.muted || audio.volume === 0) {
     audio.muted = false;
     if (audio.volume === 0) audio.volume = preferences.volume || 0.7;

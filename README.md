@@ -37,6 +37,7 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 
 - Clicking a station starts playback from the current point in its repeating schedule. The playlist's `generatedAt` timestamp anchors that schedule, and `durationSec` locates the track and offset. Listeners with accurate clocks tune into approximately the same point.
 - Tracks advance automatically and the playlist loops endlessly. Pausing stops audio; Play rejoins the station's current scheduled position. Clicking an already playing station does not restart it.
+- While a track plays, a second audio element preloads the next track. At the end, playback switches directly to that prepared element without fading or overlapping tracks. Loading is still possible if the connection or browser has not buffered enough audio.
 - Local storage remembers the selected station, volume, and mute setting. Refreshing never starts audio automatically. Listening still works if storage is unavailable.
 - The player shows loading, playing, paused, muted, and recoverable error states. After a playback/network error, click Play or the station card to retry. A stalled connection times out after 25 seconds.
 - The browser streams audio directly from the playlist URLs. A fast first start depends on the connection and audio host. Tracks are not downloaded or cached for offline use. Mobile browsers and operating systems may control volume or suspend background playback.
@@ -52,4 +53,4 @@ The chooser scales to multiple stations without changing the player. Only availa
 
 ## Implementation decisions
 
-See [implementation notes](docs/03-implementation-notes.md) for the spec reconciliation and low-fidelity structure. The frontend uses browser-native JavaScript, CSS, and one persistent audio element. The small Node scripts are only local development/build tools.
+See [implementation notes](docs/03-implementation-notes.md) for the spec reconciliation and low-fidelity structure. The frontend uses browser-native JavaScript, CSS, and two reusable audio elements for playback and preloading. The small Node scripts are only local development/build tools.

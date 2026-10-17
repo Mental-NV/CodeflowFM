@@ -32,18 +32,6 @@
       "durationSec": 5466.048000
     },
     {
-      "id": "57cadd7563aefc99",
-      "title": "MIX [JUNE]",
-      "artist": "X-Sound",
-      "filename": "future-garage-0003-future-garage-mix-june-lskeugpbity.mp3",
-      "url": "https://pub-777099b62b81412b8fa3b8a9046ae7ce.r2.dev/future-garage/future-garage-0003-future-garage-mix-june-lskeugpbity.mp3",
-      "sizeBytes": 180112508,
-      "sha256": "57cadd7563aefc99bc46df8109d58ff114b84a1863bc225786492687c29abd8a",
-      "mime": "audio/mpeg",
-      "originalName": "FUTURE GARAGE MIX [JUNE] [lSkeUGPbITY].mp3",
-      "durationSec": 6010.984500
-    },
-    {
       "id": "0ba408b1b6c3cfdf",
       "title": "MIX [MARCH]",
       "artist": "X-Sound",
@@ -66,18 +54,6 @@
       "mime": "audio/mpeg",
       "originalName": "FUTURE GARAGE MIX [MAY] [KbnczlOCoXs].mp3",
       "durationSec": 5784.032667
-    },
-    {
-      "id": "76f3307d2e15b050",
-      "title": "MIX [NOVEMBER II]",
-      "artist": "X-Sound",
-      "filename": "future-garage-0006-future-garage-mix-november-ii-zujr7albzpw.mp3",
-      "url": "https://pub-777099b62b81412b8fa3b8a9046ae7ce.r2.dev/future-garage/future-garage-0006-future-garage-mix-november-ii-zujr7albzpw.mp3",
-      "sizeBytes": 164474276,
-      "sha256": "76f3307d2e15b05032333d06f19014bccfb44c2e9536d93d75474c623ce2d8e3",
-      "mime": "audio/mpeg",
-      "originalName": "FUTURE GARAGE MIX [NOVEMBER II] [ZUJr7albZpw].mp3",
-      "durationSec": 5602.638375
     },
     {
       "id": "6786c44b5280a02d",
@@ -114,18 +90,6 @@
       "mime": "audio/mpeg",
       "originalName": "FUTURE GARAGE MIX [OCTOBER] [vZT93ZoYnos].mp3",
       "durationSec": 5673.505688
-    },
-    {
-      "id": "7aa493bb9bc1316e",
-      "title": "MIX [SEPTEMBER]",
-      "artist": "X-Sound",
-      "filename": "future-garage-0010-future-garage-mix-september-6r-kzj13iti.mp3",
-      "url": "https://pub-777099b62b81412b8fa3b8a9046ae7ce.r2.dev/future-garage/future-garage-0010-future-garage-mix-september-6r-kzj13iti.mp3",
-      "sizeBytes": 178349276,
-      "sha256": "7aa493bb9bc1316e2e9620a1390b373f8e61b7d43b878775d13b229fd62ec1bf",
-      "mime": "audio/mpeg",
-      "originalName": "FUTURE GARAGE MIX [SEPTEMBER] [6R_kZJ13ITI].mp3",
-      "durationSec": 5835.546125
     },
     {
       "id": "52191342f20175f8",

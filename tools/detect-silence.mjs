@@ -14,13 +14,13 @@ Options:
   --min-duration <seconds>  Minimum continuous silence (default: 30)
   --threshold=<dB>         Silence ceiling in dBFS (default: -50)
   --recursive              Include subdirectories (does not follow symlinks)
-  --format <text|json>     Report format (default: text)
+  --format <text|json>     Report format (default: json)
   --output <file>          Save report instead of printing it to stdout
   --ffmpeg <executable>    FFmpeg executable name or full path
   --help                  Show this help
 
 Example:
-  node tools/detect-silence.mjs "C:\\Projects\\yt-downloader\\Selected10G" --output silence-report.txt
+  node tools/detect-silence.mjs "C:\\Projects\\yt-downloader\\Selected10G" --output silence-report.json
 
 Exit codes: 0 = scan completed (including silence found), 1 = an error occurred.
 Progress goes to stderr. Reports include leading and trailing silence.
@@ -33,7 +33,7 @@ export function parseOptions(args) {
       'min-duration': { type: 'string', default: '30' },
       threshold: { type: 'string', default: '-50' },
       recursive: { type: 'boolean', default: false },
-      format: { type: 'string', default: 'text' },
+      format: { type: 'string', default: 'json' },
       output: { type: 'string' },
       ffmpeg: { type: 'string', default: 'ffmpeg' },
       help: { type: 'boolean', default: false },
@@ -87,8 +87,8 @@ export function createSilenceParser() {
         const end = Number(finish[1]);
         if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
           silences.push({
-            startSec: start, endSec: end, durationSec: Number((end - start).toFixed(6)),
             startTime: timestamp(start), endTime: timestamp(end),
+            durationSec: Number((end - start).toFixed(6)),
           });
         }
         start = null;
@@ -153,7 +153,7 @@ export function textReport(report) {
     else if (result.silences.length) {
       lines.push('', result.file);
       for (const part of result.silences) {
-        lines.push(`  ${timestamp(part.startSec)} -> ${timestamp(part.endSec)}  (${part.durationSec.toFixed(3)}s)`);
+        lines.push(`  ${part.startTime} -> ${part.endTime}  (${part.durationSec.toFixed(3)}s)`);
       }
     }
   }

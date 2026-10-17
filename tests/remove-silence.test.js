@@ -6,7 +6,8 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mergeSilences, parseOptions, preparePlan, probe } from '../tools/remove-silence.mjs';
+import { mergeSilences, parseOptions, parseTimestamp, preparePlan, probe } from '../tools/remove-silence.mjs';
+import { timestamp } from '../tools/detect-silence.mjs';
 
 const exec = promisify(execFile);
 const cli = fileURLToPath(new URL('../tools/remove-silence.mjs', import.meta.url));
@@ -18,13 +19,25 @@ test('removal CLI previews by default and validates flags', () => {
   for (const args of [[], ['a', 'b'], ['a', '--unknown'], ['a', '--ffmpeg', '']]) assert.throws(() => parseOptions(args));
 });
 
-test('silence intervals are sorted, merged, and validated using numeric seconds', () => {
+test('timestamps are parsed with millisecond precision and validated', () => {
+  assert.equal(parseTimestamp('00:10:15.123'), 615.123);
+  assert.equal(parseTimestamp('123:59:59.999'), 446399.999);
+  for (const value of [null, 15, '', '0:00:01.000', '00:60:00.000', '00:00:60.000',
+    '00:00:01', '00:00:01.1', '-01:00:00.000', '00:00:01.000\n', '9999999999999:00:00.000']) {
+    assert.throws(() => parseTimestamp(value));
+  }
+});
+
+test('silence intervals use timestamps, ignore numeric fields, and merge overlaps', () => {
   assert.deepEqual(mergeSilences([
-    { startSec: 5, endSec: 8 }, { startSec: 1, endSec: 3 },
-    { startSec: 2, endSec: 4 }, { startSec: 4, endSec: 5 },
+    { startTime: '00:00:05.000', endTime: '00:00:08.000', startSec: 100, endSec: 200 },
+    { startTime: '00:00:01.000', endTime: '00:00:03.000' },
+    { startTime: '00:00:02.000', endTime: '00:00:04.000' },
+    { startTime: '00:00:04.000', endTime: '00:00:05.000' },
   ]), [{ startSec: 1, endSec: 8 }]);
-  for (const input of [null, [{}], [{ startSec: '1', endSec: 2 }], [{ startSec: -1, endSec: 2 }],
-    [{ startSec: 1, endSec: 1 }], [{ startSec: 2, endSec: 1 }], [{ startSec: 1, endSec: Infinity }]]) {
+  for (const input of [null, [null], [{}], [{ startSec: 1, endSec: 2 }],
+    [{ startTime: '00:00:01.000', endTime: '00:00:01.000' }],
+    [{ startTime: '00:00:02.000', endTime: '00:00:01.000' }]]) {
     assert.throws(() => mergeSilences(input));
   }
 });
@@ -53,9 +66,17 @@ test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, ar
     const hashesBefore = await packets(file);
     const reportFile = path.join(dir, `${mode}.json`);
     const entry = { file: path.basename(file), silences: [
-      { startSec: 0, endSec: 1 }, { startSec: 3, endSec: 5 },
-      { startSec: 8, endSec: 10 }, { startSec: 11, endSec: 12 },
+      { startTime: '00:00:00.000', endTime: '00:00:01.000' },
+      { startTime: '00:00:03.000', endTime: '00:00:05.000' },
+      { startTime: '00:00:08.000', endTime: '00:00:10.000' },
+      { startTime: '00:00:11.000', endTime: '00:00:12.000' },
     ] };
+    if (mode === 'vbr') {
+      const detector = fileURLToPath(new URL('../tools/detect-silence.mjs', import.meta.url));
+      const detected = JSON.parse((await exec(process.execPath, [detector, dir, '--min-duration', '0.2'])).stdout);
+      entry.silences = detected.files.find((result) => result.file === file).silences;
+      assert.equal(entry.silences.length, 4);
+    }
     const report = { files: [entry], errors: [] };
     await writeFile(reportFile, JSON.stringify(report));
     const preview = await exec(process.execPath, [cli, reportFile]);
@@ -63,8 +84,8 @@ test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, ar
     assert.deepEqual(await readFile(file), original);
     assert.equal((await readdir(dir)).some((name) => name.endsWith('.bak')), mode === 'vbr');
     await assert.rejects(preparePlan({ files: [entry, entry] }, reportFile), /Duplicate/);
-    await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startSec: 0, endSec: 999 }] }] }, reportFile), /outside/);
-    await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startSec: 0, endSec: before.duration }] }] }, reportFile), /entire/);
+    await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startTime: '00:00:00.000', endTime: '00:16:39.000' }] }] }, reportFile), /outside/);
+    await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startTime: '00:00:00.000', endTime: timestamp(before.duration) }] }] }, reportFile), /entire/);
     await assert.rejects(exec(process.execPath, [cli, reportFile, '--apply', '--ffmpeg', 'missing-ffmpeg-removal-test']), /executable not found/);
     assert.deepEqual(await readFile(file), original, 'a failed FFmpeg launch must leave the source intact');
     assert.equal((await readdir(dir)).some((name) => name.startsWith('.remove-silence-')), false);

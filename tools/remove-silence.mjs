@@ -54,14 +54,21 @@ async function run(executable, args) {
   }
 }
 
+export function parseTimestamp(value, field = 'timestamp') {
+  const match = typeof value === 'string' && value.match(/^(\d{2,}):([0-5]\d):([0-5]\d)\.(\d{3})$/);
+  if (!match || match[0] !== value) throw new Error(`${field} must be a timestamp in HH:MM:SS.mmm format.`);
+  const milliseconds = Number(match[1]) * 3600000 + Number(match[2]) * 60000 + Number(match[3]) * 1000 + Number(match[4]);
+  if (!Number.isSafeInteger(milliseconds)) throw new Error(`${field} is outside the supported timestamp range.`);
+  return milliseconds / 1000;
+}
+
 export function mergeSilences(silences) {
   if (!Array.isArray(silences)) throw new Error('Every track must have a silences array.');
   const sorted = silences.map((part) => {
-    if (!part || !Number.isFinite(part.startSec) || !Number.isFinite(part.endSec)
-      || part.startSec < 0 || part.endSec <= part.startSec) {
-      throw new Error('Silence intervals require numeric 0 <= startSec < endSec.');
-    }
-    return { startSec: part.startSec, endSec: part.endSec };
+    const startSec = parseTimestamp(part?.startTime, 'startTime');
+    const endSec = parseTimestamp(part?.endTime, 'endTime');
+    if (endSec <= startSec) throw new Error('Silence intervals require startTime < endTime.');
+    return { startSec, endSec };
   }).sort((a, b) => a.startSec - b.startSec);
   const merged = [];
   for (const part of sorted) {

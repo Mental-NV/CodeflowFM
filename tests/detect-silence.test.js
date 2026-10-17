@@ -6,7 +6,8 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createSilenceParser, findMp3Files, parseOptions, timestamp } from '../tools/detect-silence.mjs';
+import { createSilenceParser, findMp3Files, parseOptions, textReport, timestamp } from '../tools/detect-silence.mjs';
+import { parseTimestamp } from '../tools/remove-silence.mjs';
 
 const exec = promisify(execFile);
 const cli = fileURLToPath(new URL('../tools/detect-silence.mjs', import.meta.url));
@@ -16,6 +17,8 @@ test('silence CLI validates arguments and accepts negative threshold values', ()
   assert.equal(options.thresholdDb, -60);
   assert.equal(options.minDuration, 2.5);
   assert.equal(options.recursive, true);
+  assert.equal(options.format, 'json');
+  assert.equal(parseOptions(['music', '--format', 'text']).format, 'text');
   assert.equal(parseOptions(['--help']).help, true);
   for (const args of [[], ['a', 'b'], ['a', '--min-duration', '0'], ['a', '--min-duration', 'NaN'],
     ['a', '--threshold=1'], ['a', '--threshold='], ['a', '--format', 'csv'], ['a', '--unknown']]) {
@@ -32,8 +35,8 @@ test('parser handles multiple intervals, scientific notation, and trailing silen
   parser.line('[silencedetect @ 000001] silence_start: 1e1');
   parser.line('[silencedetect @ 000001] silence_end: 12 | silence_duration: 2');
   assert.deepEqual(parser.silences, [
-    { startSec: 0, endSec: 2.5, durationSec: 2.5, startTime: '00:00:00.000', endTime: '00:00:02.500' },
-    { startSec: 10, endSec: 12, durationSec: 2, startTime: '00:00:10.000', endTime: '00:00:12.000' },
+    { durationSec: 2.5, startTime: '00:00:00.000', endTime: '00:00:02.500' },
+    { durationSec: 2, startTime: '00:00:10.000', endTime: '00:00:12.000' },
   ]);
   assert.equal(parser.incomplete, false);
   assert.equal(timestamp(3599.9996), '01:00:00.000');
@@ -68,7 +71,7 @@ test('CLI scans real MP3 audio, reports decoding errors, and saves JSON', async 
   await encode('leading.mp3', "aevalsrc='if(lt(t,2),0,0.5*sin(2*PI*440*t))':s=44100:d=3");
   await writeFile(path.join(nested, 'broken.mp3'), 'This is not audio');
   const output = path.join(dir, 'report.json');
-  const args = [cli, dir, '--recursive', '--min-duration', '1', '--format', 'json', '--output', output];
+  const args = [cli, dir, '--recursive', '--min-duration', '1', '--output', output];
   await assert.rejects(exec(process.execPath, args), (error) => {
     assert.equal(error.code, 1, 'a failed decode must produce a nonzero exit code');
     assert.match(error.stderr, /Report saved/);
@@ -87,24 +90,28 @@ test('CLI scans real MP3 audio, reports decoding errors, and saves JSON', async 
   assert.equal(get('one active channel.mp3'), undefined, 'a single silent channel is not a silent track');
   for (const file of report.files) {
     for (const silence of file.silences) {
-      assert.equal(silence.startTime, timestamp(silence.startSec));
-      assert.equal(silence.endTime, timestamp(silence.endSec));
+      assert.match(silence.startTime, /^\d{2,}:\d{2}:\d{2}\.\d{3}$/);
+      assert.match(silence.endTime, /^\d{2,}:\d{2}:\d{2}\.\d{3}$/);
+      assert.equal(Object.hasOwn(silence, 'startSec'), false);
+      assert.equal(Object.hasOwn(silence, 'endSec'), false);
     }
   }
   const gaps = get('Трек with gaps.MP3').silences;
   assert.equal(gaps.length, 2);
-  for (const [actual, expected] of [[gaps[0].startSec, 1], [gaps[0].endSec, 3], [gaps[1].startSec, 4], [gaps[1].endSec, 6],
-    [get('all silent.mp3').silences[0].startSec, 0], [get('all silent.mp3').silences[0].endSec, 3],
-    [get('leading.mp3').silences[0].startSec, 0], [get('leading.mp3').silences[0].endSec, 2]]) {
-    assert.ok(Math.abs(actual - expected) < 0.06, `expected ${expected}, received ${actual}`);
+  for (const [actual, expected] of [[gaps[0].startTime, 1], [gaps[0].endTime, 3], [gaps[1].startTime, 4], [gaps[1].endTime, 6],
+    [get('all silent.mp3').silences[0].startTime, 0], [get('all silent.mp3').silences[0].endTime, 3],
+    [get('leading.mp3').silences[0].startTime, 0], [get('leading.mp3').silences[0].endTime, 2]]) {
+    assert.ok(Math.abs(parseTimestamp(actual) - expected) < 0.06, `expected ${expected}, received ${actual}`);
   }
+  assert.ok(textReport(report).includes(`${gaps[0].startTime} -> ${gaps[0].endTime}`));
   const before = await readFile(output, 'utf8');
   await assert.rejects(exec(process.execPath, args), /EEXIST/);
   assert.equal(await readFile(output, 'utf8'), before, 'existing reports must not be overwritten');
-  const empty = JSON.parse((await exec(process.execPath, [cli, dir, '--format', 'json'])).stdout);
+  const empty = JSON.parse((await exec(process.execPath, [cli, dir])).stdout);
   assert.equal(empty.summary.totalFiles, 0, 'subdirectories are opt-in');
   assert.deepEqual(empty.files, []);
   assert.deepEqual(empty.errors, []);
+  assert.match((await exec(process.execPath, [cli, dir, '--format', 'text'])).stdout, /No MP3 files found/);
   await assert.rejects(exec(process.execPath, [cli, dir, '--output', path.join(nested, 'continuous.mp3')]), /must not have an .mp3/);
   await assert.rejects(exec(process.execPath, [cli, dir, '--ffmpeg', 'missing-ffmpeg-for-test']), /Cannot start FFmpeg/);
 });

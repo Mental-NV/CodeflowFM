@@ -16,7 +16,7 @@ node tools/remove-silence.mjs silence-report.json --apply
 
 The reference report lists four silent sections across three tracks, totaling about **1,141.988 seconds (19 minutes, 2 seconds)**. Only files listed with silence are processed. Entries in the report's separate `errors` array are announced and skipped. Older reports containing clean tracks are also accepted; those tracks are skipped.
 
-The tool uses numeric `startSec` and `endSec` values; formatted timestamps and `durationSec` are informational. Relative track paths are resolved against the report's directory. Overlapping or adjacent intervals are merged before removal. Out-of-range intervals, duplicate files, non-MP3 input, symlinks, hard links, and intervals covering the entire track are rejected before any changes start.
+The tool uses `startTime` and `endTime` in `HH:MM:SS.mmm` format, with milliseconds required and hours allowed above 99. These timestamps determine the cuts; `durationSec` and any legacy numeric `startSec` / `endSec` fields are ignored. Reports without valid timestamps are rejected. Relative track paths are resolved against the report's directory. Overlapping or adjacent intervals are merged before removal. Out-of-range intervals, duplicate files, non-MP3 input, symlinks, hard links, and intervals covering the entire track are rejected before any changes start.
 
 ## Preserving audio parameters
 

@@ -13,6 +13,39 @@ let lastMetadata = '';
 let lastSaved = '';
 const player = new RadioPlayer(audio, { onChange: render });
 
+const compactPlayer = window.matchMedia('(max-width: 700px)');
+const volumeControl = element('volume-control');
+const volumeToggle = element('volume-toggle');
+const volumePanel = element('volume-panel');
+
+function setVolumePanelOpen(open, restoreFocus = false) {
+  const expanded = compactPlayer.matches && open;
+  volumePanel.hidden = compactPlayer.matches && !expanded;
+  volumeToggle.setAttribute('aria-expanded', String(expanded));
+  if (expanded) element('volume').focus();
+  else if (restoreFocus) (compactPlayer.matches ? volumeToggle : element('volume')).focus();
+}
+
+volumeToggle.addEventListener('click', () => {
+  setVolumePanelOpen(volumeToggle.getAttribute('aria-expanded') !== 'true');
+});
+volumeControl.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && volumeToggle.getAttribute('aria-expanded') === 'true') {
+    event.preventDefault();
+    setVolumePanelOpen(false, true);
+  }
+});
+volumeControl.addEventListener('focusout', event => {
+  if (!volumeControl.contains(event.relatedTarget)) setVolumePanelOpen(false);
+});
+document.addEventListener('pointerdown', event => {
+  if (!volumeControl.contains(event.target)) setVolumePanelOpen(false, volumePanel.contains(document.activeElement));
+});
+compactPlayer.addEventListener('change', () => {
+  setVolumePanelOpen(false, volumeControl.contains(document.activeElement));
+});
+setVolumePanelOpen(false);
+
 function render() {
   const station = player.station;
   const muted = audio.muted || audio.volume === 0;
@@ -31,9 +64,11 @@ function render() {
   element('play-toggle').disabled = !station;
   const action = player.wantsPlayback ? 'Pause' : 'Play';
   element('play-toggle').setAttribute('aria-label', `${action}${station ? ` ${station.name}` : ''}`);
+  element('play-toggle').title = action;
   element('play-label').textContent = action;
   element('play-icon').firstElementChild.setAttribute('d', player.wantsPlayback ? 'M6 5h4v14H6zm8 0h4v14h-4z' : 'm9 5 11 7-11 7Z');
   element('mute-toggle').setAttribute('aria-label', muted ? 'Unmute' : 'Mute');
+  element('mute-toggle').title = muted ? 'Unmute' : 'Mute';
   element('mute-toggle').setAttribute('aria-pressed', String(muted));
   element('mute-label').textContent = muted ? 'Unmute' : 'Mute';
   element('sound-waves').toggleAttribute('hidden', muted);

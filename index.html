@@ -52,9 +52,14 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path id="sound-waves" d="M17 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path id="sound-cross" d="m17 9 5 6m0-6-5 6" hidden/></svg>
             <span id="mute-label">Mute</span>
           </button>
-          <div class="volume-control">
-            <div class="volume-caption"><label for="volume">Volume</label><output id="volume-value" for="volume">70%</output></div>
-            <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
+          <div id="volume-control" class="volume-control">
+            <button id="volume-toggle" class="volume-toggle" type="button" aria-label="Adjust volume" title="Adjust volume" aria-expanded="false" aria-controls="volume-panel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v5m0 4v9M12 3v10m0 4v4M18 3v2m0 4v12M3 8h6v4H3zM9 13h6v4H9zM15 5h6v4h-6z"/></svg>
+            </button>
+            <div id="volume-panel" class="volume-panel">
+              <div class="volume-caption"><label for="volume">Volume</label><output id="volume-value" for="volume">70%</output></div>
+              <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Volume">
+            </div>
           </div>
         </div>
       </footer>

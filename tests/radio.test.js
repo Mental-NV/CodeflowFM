@@ -382,7 +382,7 @@ test('invalid and empty playlists are rejected', () => {
 
 test('the shipped catalog contains 57 playable Future Garage tracks', async () => {
   const catalog = JSON.parse(await readFile(new URL('../assets/stations.json', import.meta.url), 'utf8'));
-  const playlist = JSON.parse(await readFile(new URL('../assets/playlist.json', import.meta.url), 'utf8'));
+  const playlist = JSON.parse(await readFile(new URL('../assets/future-garage.json', import.meta.url), 'utf8'));
   const channel = prepareStation(catalog.stations[0], playlist);
   assert.equal(channel.id, 'future-garage');
   assert.equal(channel.tracks.length, 57);

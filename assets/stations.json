@@ -5,7 +5,7 @@
       "name": "Future Garage",
       "description": "Atmospheric, rhythmic, forward-moving.",
       "artwork": "./assets/future-garage.svg",
-      "playlist": "./assets/playlist.json"
+      "playlist": "./assets/future-garage.json"
     }
   ]
 }

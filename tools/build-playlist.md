@@ -1,0 +1,54 @@
+# Build an MP3 playlist
+
+`build-playlist.mjs` renames or copies local MP3 files to URL-safe filenames and generates a playlist, its JSON Schema, and a file mapping. Use Node.js 22+ for this project (the script itself supports Node.js 18+). No npm packages are required. Optionally install `music-metadata` in the project with `npm install music-metadata` to read artist and title tags; missing packages or unreadable tags fall back to the original filename.
+
+Run commands from the CodeFlowFM project directory. Start by previewing filenames in a separate output directory:
+
+```powershell
+node tools/build-playlist.mjs --dir "C:\Music\Future Garage" --out "./playlist-preview" --dryRun
+```
+
+**Preview mode still creates output directories and writes or overwrites all three JSON files.** It leaves the audio files untouched; the generated playlist refers to the planned filenames.
+
+To copy audio into a prepared output folder and generate public URLs:
+
+```powershell
+node tools/build-playlist.mjs --dir "C:\Music\Future Garage" --mode copy --out "./prepared-audio" --baseUrl "https://cdn.example.com/future-garage"
+```
+
+The default mode is `rename`: it changes original filenames and moves the audio if `--out` points elsewhere. Use a fresh output directory to avoid overwriting existing files. Repeated runs on previously renamed files can change their names again.
+
+## Options
+
+Use separate arguments (`--dir "path"`), rather than `--dir=path`. Paths resolve relative to the current working directory.
+
+| Option | Default | Behavior |
+| --- | --- | --- |
+| `--dir <path>` | Required | Input directory containing MP3 files; extension matching is case insensitive. |
+| `--out <path>` | Input directory | Destination for audio and JSON files. In copy mode, if this equals the input directory, outputs go into its `_renamed` subfolder. |
+| `--mode <rename\|copy>` | `rename` | Rename/move originals, or copy them while retaining originals. |
+| `--recursive` | Off | Include MP3 files in subdirectories; output is flattened into one directory. |
+| `--dryRun` | Off | Preview audio renames without applying them; still write JSON artifacts. |
+| `--baseUrl <url>` | Omitted | Public audio URL prefix; trailing slashes are removed. Without it, track URLs use `./<filename>`. |
+| `--stationId <id>` | `future-garage` | Playlist station ID and the source of the filename prefix. |
+| `--stationName <name>` | `Future Garage` | Playlist station display name. |
+
+Boolean flags also accept `true`, `1`, `yes`, `y`, or `on`; other supplied values are false. There is no dedicated `--help` mode.
+
+## Generated files
+
+The effective output directory contains:
+
+- `playlist.json`: schema version `1.0`, station metadata, generation timestamp, optional base URL, and track records.
+- `playlist.schema.json`: JSON Schema 2020-12 describing the generated playlist format.
+- `rename-map.json`: absolute source and destination paths, original and generated filenames, full SHA-256 hashes, and byte sizes.
+
+Files are sorted by their full paths before assigning a four-digit sequence number. Names normally follow `<station-slug>-<sequence>-<track-slug>.mp3`. Slugs use lowercase ASCII letters, digits, and hyphens; non-Latin characters are removed, and an empty track slug becomes `track`. The track slug uses `artist - title` when both tags are available, otherwise the original filename stem, and is capped at 80 characters. Filenames depend on ordering and metadata; they are not content-hash names.
+
+Each track contains a content-based ID (the first 16 SHA-256 characters), full hash, filename, encoded URL, byte size, MIME type `audio/mpeg`, original name, and nullable artist/title fields. `durationSec` is always `null`.
+
+## Use with CodeFlowFM
+
+Before adding the generated playlist to `assets/`, fill in a positive `durationSec` for every track and ensure each track has a public HTTP(S) URL. The player needs durations for its repeating schedule. Upload the prepared MP3 files to the prefix passed as `--baseUrl`, then follow the [station setup instructions](../README.md#add-a-station). The script prepares files locally; it does not upload them or update the station catalog.
+
+Exit code `0` indicates success, `2` indicates a missing `--dir` or invalid mode, and `1` indicates no MP3 files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.

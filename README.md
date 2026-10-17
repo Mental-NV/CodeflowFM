@@ -53,6 +53,8 @@ The chooser scales to multiple stations without changing the player. Only availa
 
 ## Audio maintenance tools
 
+Use the [playlist builder](tools/build-playlist.md) to prepare MP3 filenames and generate playlist JSON files for a station.
+
 Use the [silence detection CLI](tools/detect-silence.md) to scan local MP3 files for long silent sections and produce timestamped text or JSON reports.
 
 ## Implementation decisions

@@ -1,8 +1,8 @@
 # Codeflow FM
 
-**Listen live: [https://codeflowfm.pages.dev/](https://codeflowfm.pages.dev/)**
+Background music listenting app. **Listen live: [https://codeflowfm.pages.dev/](https://codeflowfm.pages.dev/)**
 
-A static background-radio app. Click **Future Garage** to listen. The 57-track playlist plays continuously and wraps from the last track to the first.
+![Screen](docs\images\screen.png)
 
 ## Run locally
 

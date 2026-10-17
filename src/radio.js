@@ -50,11 +50,12 @@ export function getLivePosition(station, now = Date.now()) {
 }
 
 export class RadioPlayer {
-  constructor(audio, { onChange = () => {}, now = Date.now, timeoutMs = 25000, createAudio = () => new Audio() } = {}) {
+  constructor(audio, { onChange = () => {}, onProgress = () => {}, now = Date.now, timeoutMs = 25000, createAudio = () => new Audio() } = {}) {
     this.audio = audio;
     this.spareAudio = createAudio();
     this.preparedTrack = null;
     this.onChange = onChange;
+    this.onProgress = onProgress;
     this.now = now;
     this.timeoutMs = timeoutMs;
     this.station = null;
@@ -73,8 +74,15 @@ export class RadioPlayer {
 
   listen(audio) {
     audio.addEventListener('loadedmetadata', () => {
-      if (audio === this.audio) this.seekToOffset();
+      if (audio !== this.audio) return;
+      this.seekToOffset();
+      this.onProgress(this);
     });
+    for (const event of ['timeupdate', 'durationchange']) {
+      audio.addEventListener(event, () => {
+        if (audio === this.audio) this.onProgress(this);
+      });
+    }
     audio.addEventListener('playing', () => {
       if (audio !== this.audio || !this.wantsPlayback || audio.paused) return;
       clearTimeout(this.timer);

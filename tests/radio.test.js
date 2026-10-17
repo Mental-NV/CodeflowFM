@@ -137,6 +137,33 @@ test('handoff copies the latest volume and mute settings in both directions', ()
   player.pause();
 });
 
+test('progress follows the active audio across handoffs and ignores preloading events', () => {
+  const updates = [];
+  const { player, audio, spare, channel } = fixture({
+    onProgress: player => updates.push({ index: player.trackIndex, offset: player.audio.currentTime }),
+  });
+  player.tune(channel);
+  audio.event('loadedmetadata');
+  assert.deepEqual(updates, [{ index: 1, offset: 5 }]);
+  audio.event('playing');
+  for (const event of ['loadedmetadata', 'durationchange', 'timeupdate']) spare.event(event);
+  assert.equal(updates.length, 1);
+  audio.currentTime = 9;
+  audio.event('timeupdate');
+  assert.deepEqual(updates.at(-1), { index: 1, offset: 9 });
+  audio.event('ended');
+  spare.currentTime = 2;
+  spare.event('timeupdate');
+  assert.deepEqual(updates.at(-1), { index: 2, offset: 2 });
+  const count = updates.length;
+  audio.event('timeupdate');
+  audio.event('durationchange');
+  assert.equal(updates.length, count);
+  spare.event('durationchange');
+  assert.equal(updates.length, count + 1);
+  player.pause();
+});
+
 test('standby events cannot seek, interrupt, or advance the current track', () => {
   const { player, audio, spare, channel } = fixture();
   player.tune(channel);

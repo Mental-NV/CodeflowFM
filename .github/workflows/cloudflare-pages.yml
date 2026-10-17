@@ -1,0 +1,66 @@
+name: Cloudflare Pages
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize production runs; only superseded PR checks may be cancelled.
+concurrency:
+  group: cloudflare-pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-deploy:
+    name: Test, build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      # The app and its tests have no package dependencies or lockfile.
+      - name: Test
+        run: npm test
+
+      - name: Build static app
+        run: npm run build
+
+      - name: Check deployment secrets
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo '::error::Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in repository Actions secrets. See docs/04-cloudflare-pages-deployment.md.'
+            exit 1
+          fi
+
+      - name: Deploy production to Cloudflare Pages
+        id: deploy
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4'
+          command: pages deploy dist --project-name=codeflowfm --branch=master --commit-hash=${{ github.sha }}
+
+      - name: Add deployment link to run summary
+        if: steps.deploy.outcome == 'success'
+        run: |
+          printf '%s\n' 'Production: https://codeflowfm.pages.dev/' >> "$GITHUB_STEP_SUMMARY"

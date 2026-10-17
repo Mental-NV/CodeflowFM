@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,7 +42,7 @@ test('silence intervals use timestamps, ignore numeric fields, and merge overlap
   }
 });
 
-test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, artwork, and backups', async (t) => {
+test('CLI writes cleaned CBR and VBR MP3s, preserving originals, frames, metadata, and artwork', async (t) => {
   try { await exec('ffmpeg', ['-version']); await exec('ffprobe', ['-version']); }
   catch { t.skip('FFmpeg and FFprobe are required for audio integration tests.'); return; }
   const dir = await mkdtemp(path.join(tmpdir(), 'remove-silence-'));
@@ -62,6 +62,10 @@ test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, ar
       ...(mode === 'cbr' ? ['-b:a', '192k'] : ['-q:a', '2']), '-ac', '2',
       '-c:v', 'copy', '-disposition:v', 'attached_pic', '-metadata', 'title=Keep this title', file]);
     const original = await readFile(file);
+    const originalStat = await stat(file);
+    const output = path.join(dir, `${path.parse(file).name}.cleaned.MP3`);
+    const legacyBackup = `${file}.bak`;
+    if (mode === 'cbr') await writeFile(legacyBackup, 'Legacy backup stays unchanged');
     const before = await probe(file);
     const hashesBefore = await packets(file);
     const reportFile = path.join(dir, `${mode}.json`);
@@ -81,26 +85,37 @@ test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, ar
     await writeFile(reportFile, JSON.stringify(report));
     const preview = await exec(process.execPath, [cli, reportFile]);
     assert.match(preview.stdout, /Preview only/);
+    assert.ok(preview.stdout.includes(`Output: ${output}`));
     assert.deepEqual(await readFile(file), original);
-    assert.equal((await readdir(dir)).some((name) => name.endsWith('.bak')), mode === 'vbr');
+    await assert.rejects(readFile(output), { code: 'ENOENT' });
     await assert.rejects(preparePlan({ files: [entry, entry] }, reportFile), /Duplicate/);
     await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startTime: '00:00:00.000', endTime: '00:16:39.000' }] }] }, reportFile), /outside/);
     await assert.rejects(preparePlan({ files: [{ ...entry, silences: [{ startTime: '00:00:00.000', endTime: timestamp(before.duration) }] }] }, reportFile), /entire/);
     await assert.rejects(exec(process.execPath, [cli, reportFile, '--apply', '--ffmpeg', 'missing-ffmpeg-removal-test']), /executable not found/);
     assert.deepEqual(await readFile(file), original, 'a failed FFmpeg launch must leave the source intact');
+    await assert.rejects(readFile(output), { code: 'ENOENT' });
     assert.equal((await readdir(dir)).some((name) => name.startsWith('.remove-silence-')), false);
 
+    await writeFile(output, 'Existing output stays unchanged');
+    await assert.rejects(exec(process.execPath, [cli, reportFile, '--apply']), /Output file already exists/);
+    assert.equal(await readFile(output, 'utf8'), 'Existing output stays unchanged');
+    assert.deepEqual(await readFile(file), original);
+    await rm(output);
+
     const applied = await exec(process.execPath, [cli, reportFile, '--apply']);
-    assert.match(applied.stdout, /Updated/);
-    assert.deepEqual(await readFile(`${file}.bak`), original);
-    const after = await probe(file);
+    assert.ok(applied.stdout.includes(`Created ${output}`));
+    assert.deepEqual(await readFile(file), original);
+    assert.equal((await stat(file)).mtimeMs, originalStat.mtimeMs, 'the source modification time must not change');
+    if (mode === 'cbr') assert.equal(await readFile(legacyBackup, 'utf8'), 'Legacy backup stays unchanged');
+    else await assert.rejects(readFile(legacyBackup), { code: 'ENOENT' });
+    const after = await probe(output);
     assert.ok(Math.abs(after.duration - (before.duration - 6)) < 0.2);
     assert.equal(after.audio.sample_rate, before.audio.sample_rate);
     assert.equal(after.audio.channels, before.audio.channels);
     if (mode === 'cbr') assert.equal(after.audio.bit_rate, before.audio.bit_rate);
     assert.equal(after.data.format.tags.title, 'Keep this title');
-    assert.deepEqual(await packets(file, 'v:0'), await packets(`${file}.bak`, 'v:0'));
-    const hashesAfter = await packets(file);
+    assert.deepEqual(await packets(output, 'v:0'), await packets(file, 'v:0'));
+    const hashesAfter = await packets(output);
     assert.ok(hashesAfter.length < hashesBefore.length * 0.6);
     let cursor = 0;
     for (const hash of hashesAfter) {
@@ -109,11 +124,12 @@ test('CLI removes silence from CBR and VBR MP3s, preserving frames, metadata, ar
       cursor++;
     }
     // Rescan decoded audio to establish that the reported long gaps are gone.
-    const decoded = await exec('ffmpeg', ['-hide_banner', '-nostdin', '-i', file, '-af', 'silencedetect=n=-50dB:d=0.2', '-f', 'null', '-']);
+    const decoded = await exec('ffmpeg', ['-hide_banner', '-nostdin', '-i', output, '-af', 'silencedetect=n=-50dB:d=0.2', '-f', 'null', '-']);
     assert.doesNotMatch(decoded.stderr, /silence_start:/);
-    const edited = await readFile(file);
-    await assert.rejects(exec(process.execPath, [cli, reportFile, '--apply']), /Backup already exists/);
-    assert.deepEqual(await readFile(file), edited);
-    assert.deepEqual(await readFile(`${file}.bak`), original);
+    const edited = await readFile(output);
+    await assert.rejects(exec(process.execPath, [cli, reportFile, '--apply']), /Output file already exists/);
+    assert.deepEqual(await readFile(output), edited);
+    assert.deepEqual(await readFile(file), original);
+    assert.equal((await readdir(dir)).some((name) => name.startsWith('.remove-silence-')), false);
   }
 });

@@ -55,10 +55,6 @@ The chooser scales to multiple stations without changing the player. Only availa
 
 Use the [playlist builder](tools/build-playlist.md) to prepare MP3 filenames and generate playlist JSON files for a station.
 
-Use the [silence detection CLI](tools/detect-silence.md) to scan local MP3 files for long silent sections and produce timestamped text or JSON reports.
-
-Use the [silence removal CLI](tools/remove-silence.md) to remove intervals from a JSON silence report, preserving encoded MP3 frames and saving backups before updating originals.
-
 ## Implementation decisions
 
 See [implementation notes](docs/03-implementation-notes.md) for the spec reconciliation and low-fidelity structure. The frontend uses browser-native JavaScript, CSS, and two reusable audio elements for playback and preloading. The small Node scripts are only local development/build tools.

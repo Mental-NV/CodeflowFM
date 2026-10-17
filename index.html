@@ -40,7 +40,13 @@
           <div class="player-copy">
             <p id="player-station" class="player-station">Nothing playing</p>
             <p id="playback-status" class="playback-status" role="status" aria-live="polite">Choose a station to begin.</p>
-            <p id="track-info" class="track-info" hidden></p>
+          </div>
+        </div>
+        <div class="track-playback">
+          <p id="track-info" class="track-info">No track playing</p>
+          <div class="track-timeline">
+            <progress id="track-progress" class="track-progress" max="1" value="0" aria-label="Track playback progress"></progress>
+            <span id="track-time" class="track-time">0:00 / 0:00</span>
           </div>
         </div>
         <div class="sound-controls">

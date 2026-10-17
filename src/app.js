@@ -11,9 +11,9 @@ audio.muted = preferences.muted;
 const cards = new Map();
 let lastMetadata = '';
 let lastSaved = '';
-const player = new RadioPlayer(audio, { onChange: render });
+const player = new RadioPlayer(audio, { onChange: render, onProgress: renderProgress });
 
-const compactPlayer = window.matchMedia('(max-width: 700px)');
+const compactPlayer = window.matchMedia('(max-width: 1000px)');
 const volumeControl = element('volume-control');
 const volumeToggle = element('volume-toggle');
 const volumePanel = element('volume-panel');
@@ -46,7 +46,35 @@ compactPlayer.addEventListener('change', () => {
 });
 setVolumePanelOpen(false);
 
+function formatTrackTime(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(total / 60);
+  const remainder = String(total % 60).padStart(2, '0');
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, '0')}:${remainder}`
+    : `${minutes}:${remainder}`;
+}
+
+function renderProgress() {
+  const audio = player.audio;
+  const track = player.station && !['ready', 'idle'].includes(player.state)
+    ? player.station.tracks[player.trackIndex] : null;
+  // Use the playlist duration until metadata for the active source is available.
+  const duration = track
+    ? (player.pendingOffset === null && audio.readyState >= 1 && Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : track.durationSec)
+    : 0;
+  const position = player.pendingOffset ?? audio.currentTime;
+  const elapsed = track && Number.isFinite(position) ? Math.min(duration, Math.max(0, position)) : 0;
+  const time = `${formatTrackTime(elapsed)} / ${formatTrackTime(duration)}`;
+  const progress = element('track-progress');
+  progress.max = duration || 1;
+  progress.value = elapsed;
+  progress.setAttribute('aria-valuetext', time);
+  element('track-time').textContent = time;
+}
+
 function render() {
+  const audio = player.audio;
   const station = player.station;
   const muted = audio.muted || audio.volume === 0;
   const playing = player.state === 'playing';
@@ -56,7 +84,10 @@ function render() {
     paused: 'Paused', error: player.error,
   }[player.state];
   element('player-station').textContent = station?.name ?? 'Nothing playing';
+  element('player-station').title = station?.name ?? 'Nothing playing';
   element('playback-status').textContent = status;
+  element('playback-status').title = status;
+  element('player-art').title = `${station?.name ?? 'Nothing playing'} · ${status}`;
   element('playback-status').dataset.error = String(player.state === 'error');
   const artwork = element('player-art');
   artwork.hidden = !station;
@@ -77,10 +108,10 @@ function render() {
   element('volume-value').value = `${Math.round(audio.volume * 100)}%`;
 
   const track = station && !['ready', 'idle'].includes(player.state) ? station.tracks[player.trackIndex] : null;
-  const metadata = [track?.artist, track?.title].filter(Boolean).join(' · ');
-  element('track-info').textContent = metadata;
+  const metadata = [track?.artist, track?.title].filter(Boolean).join(' - ');
+  element('track-info').textContent = metadata || 'No track playing';
   element('track-info').title = metadata;
-  element('track-info').hidden = !metadata;
+  renderProgress();
   for (const [id, card] of cards) {
     const current = station?.id === id;
     card.dataset.current = String(current);
@@ -106,11 +137,13 @@ function render() {
 
 element('play-toggle').addEventListener('click', () => player.toggle());
 element('volume').addEventListener('input', event => {
+  const audio = player.audio;
   audio.volume = Number(event.target.value) / 100;
   if (audio.volume > 0) audio.muted = false;
   render();
 });
 element('mute-toggle').addEventListener('click', () => {
+  const audio = player.audio;
   if (audio.muted || audio.volume === 0) {
     audio.muted = false;
     if (audio.volume === 0) audio.volume = preferences.volume || 0.7;

@@ -50,9 +50,12 @@ export function getLivePosition(station, now = Date.now()) {
 }
 
 export class RadioPlayer {
-  constructor(audio, { onChange = () => {}, now = Date.now, timeoutMs = 25000 } = {}) {
+  constructor(audio, { onChange = () => {}, onProgress = () => {}, now = Date.now, timeoutMs = 25000, createAudio = () => new Audio() } = {}) {
     this.audio = audio;
+    this.spareAudio = createAudio();
+    this.preparedTrack = null;
     this.onChange = onChange;
+    this.onProgress = onProgress;
     this.now = now;
     this.timeoutMs = timeoutMs;
     this.station = null;
@@ -63,34 +66,53 @@ export class RadioPlayer {
     this.request = 0;
     this.timer = null;
     this.pendingOffset = null;
+    this.awaitingPlayback = false;
 
-    audio.addEventListener('loadedmetadata', () => this.seekToOffset());
+    this.listen(audio);
+    this.listen(this.spareAudio);
+  }
+
+  listen(audio) {
+    audio.addEventListener('loadedmetadata', () => {
+      if (audio !== this.audio) return;
+      this.seekToOffset();
+      this.onProgress(this);
+    });
+    for (const event of ['timeupdate', 'durationchange']) {
+      audio.addEventListener(event, () => {
+        if (audio === this.audio) this.onProgress(this);
+      });
+    }
     audio.addEventListener('playing', () => {
-      if (!this.wantsPlayback || audio.paused) return;
+      if (audio !== this.audio || !this.wantsPlayback || audio.paused) return;
       clearTimeout(this.timer);
+      this.awaitingPlayback = false;
       this.state = 'playing';
       this.error = '';
+      this.prepareNextTrack();
       this.emit();
     });
     audio.addEventListener('waiting', () => {
-      if (!this.wantsPlayback) return;
+      if (audio !== this.audio || !this.wantsPlayback) return;
       this.state = 'loading';
       this.startTimeout();
       this.emit();
     });
     audio.addEventListener('pause', () => {
-      if (this.state !== 'playing' || !audio.paused || audio.ended) return;
+      if (audio !== this.audio || this.state !== 'playing' || !audio.paused || audio.ended) return;
       this.pause();
     });
     audio.addEventListener('ended', () => {
-      if (this.wantsPlayback && this.station) {
-        this.startTrack((this.trackIndex + 1) % this.station.tracks.length, 0);
+      if (audio === this.audio && this.wantsPlayback && this.station) {
+        this.startTrack((this.trackIndex + 1) % this.station.tracks.length, 0, true);
       }
     });
     audio.addEventListener('error', () => {
-      if (this.wantsPlayback && audio.error) this.fail();
+      if (audio === this.audio && this.wantsPlayback && audio.error) this.fail();
     });
-    audio.addEventListener('volumechange', () => this.emit());
+    audio.addEventListener('volumechange', () => {
+      if (audio === this.audio) this.emit();
+    });
   }
 
   emit() { this.onChange(this); }
@@ -109,22 +131,51 @@ export class RadioPlayer {
     this.startTrack(index, offset);
   }
 
-  startTrack(index, offset) {
+  prepareNextTrack() {
+    const index = (this.trackIndex + 1) % this.station.tracks.length;
+    if (this.preparedTrack?.station === this.station && this.preparedTrack.index === index) return;
+    this.preparedTrack = { station: this.station, index };
+    this.spareAudio.preload = 'auto';
+    this.spareAudio.src = this.station.tracks[index].url;
+    this.spareAudio.load();
+  }
+
+  clearPreload() {
+    this.preparedTrack = null;
+    this.spareAudio.pause();
+    this.spareAudio.removeAttribute('src');
+    this.spareAudio.load();
+  }
+
+  startTrack(index, offset, usePrepared = false) {
     const request = ++this.request;
+    const prepared = usePrepared && this.preparedTrack?.station === this.station
+      && this.preparedTrack.index === index && !this.spareAudio.error;
     clearTimeout(this.timer);
     this.wantsPlayback = false;
     this.state = 'loading';
     this.audio.pause();
+    if (prepared) {
+      // Keep the next element's buffered/decoded media intact. Only one plays at a time.
+      const previous = this.audio;
+      this.spareAudio.volume = previous.volume;
+      this.spareAudio.muted = previous.muted;
+      this.audio = this.spareAudio;
+      this.spareAudio = previous;
+    }
+    this.clearPreload();
     this.trackIndex = index;
     this.error = '';
-    this.pendingOffset = offset;
-    this.audio.src = this.station.tracks[index].url;
+    this.pendingOffset = prepared ? null : offset;
+    if (!prepared) this.audio.src = this.station.tracks[index].url;
+    this.state = prepared && this.audio.readyState >= 3 ? 'playing' : 'loading';
+    this.awaitingPlayback = true;
     this.wantsPlayback = true;
     this.emit();
     this.startTimeout();
     // play() stays in the station click's call stack for browser gesture policies.
     try {
-      this.audio.currentTime = offset;
+      if (!prepared) this.audio.currentTime = offset;
       const playback = this.audio.play();
       Promise.resolve(playback).catch(error => {
         if (request !== this.request || !this.wantsPlayback) return;
@@ -145,7 +196,7 @@ export class RadioPlayer {
   startTimeout() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      if (this.wantsPlayback && this.state === 'loading') {
+      if (this.wantsPlayback && (this.state === 'loading' || this.awaitingPlayback)) {
         this.fail('The connection is taking too long. Press Play to try again.');
       }
     }, this.timeoutMs);
@@ -155,9 +206,11 @@ export class RadioPlayer {
   pause() {
     this.request++;
     this.wantsPlayback = false;
+    this.awaitingPlayback = false;
     clearTimeout(this.timer);
     this.state = this.station ? 'paused' : 'idle';
     this.audio.pause();
+    this.clearPreload();
     this.emit();
   }
 
@@ -169,10 +222,12 @@ export class RadioPlayer {
   fail(message = `Could not play ${this.station?.name ?? 'this station'}. Press Play to try again.`) {
     this.request++;
     this.wantsPlayback = false;
+    this.awaitingPlayback = false;
     clearTimeout(this.timer);
     this.state = 'error';
     this.error = message;
     this.audio.pause();
+    this.clearPreload();
     this.emit();
   }
 }

@@ -1,0 +1,270 @@
+{
+  "directory": "C:\\Projects\\yt-downloader\\Selected10G",
+  "thresholdDb": -50,
+  "minDurationSec": 60,
+  "recursive": false,
+  "summary": {
+    "totalFiles": 58,
+    "scannedFiles": 58,
+    "failedFiles": 0,
+    "filesWithSilence": 3,
+    "silentSections": 4
+  },
+  "files": [
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0001-future-garage-mix-april-jn8slcbnuqw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0002-future-garage-mix-february-6clnrtrp9r4.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0003-future-garage-mix-june-lskeugpbity.mp3",
+      "silences": [
+        {
+          "startSec": 2096.127792,
+          "endSec": 2320.982583,
+          "durationSec": 224.854791
+        }
+      ]
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0004-future-garage-mix-march-owfzyo26nnu.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0005-future-garage-mix-may-kbnczlocoxs.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0006-future-garage-mix-november-ii-zujr7albzpw.mp3",
+      "silences": [
+        {
+          "startSec": 791.40875,
+          "endSec": 1095.46725,
+          "durationSec": 304.0585
+        },
+        {
+          "startSec": 3754.68525,
+          "endSec": 4051.514146,
+          "durationSec": 296.828896
+        }
+      ]
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0007-future-garage-mix-november-9qcdhrrvgl4.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0008-future-garage-mix-october-ii-cdpcia1c16i.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0009-future-garage-mix-october-vzt93zoynos.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0010-future-garage-mix-september-6r-kzj13iti.mp3",
+      "silences": [
+        {
+          "startSec": 3192.690062,
+          "endSec": 3508.936333,
+          "durationSec": 316.246271
+        }
+      ]
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0011-future-garage-mix-summer-z3fd6xravgw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0012-future-garagewave-mix-april-iii-tybc8dnxhre.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0013-future-garagewave-mix-april-iv-grumo73fxcc.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0014-future-garagewave-mix-april-v-hfob2g49bmg.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0015-future-garagewave-mix-april-vi-hz5roibmj9c.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0016-future-garagewave-mix-april-vii-s4sdq3s6msi.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0017-future-garagewave-mix-august-iii-pfz-tzqi5du.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0018-future-garagewave-mix-august-4v-ynvd1vpa.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0019-future-garagewave-mix-autumn-7oxgkcxx5ka.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0020-future-garagewave-mix-december-vi-frbuox5-z0o.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0021-future-garagewave-mix-december-viii-3x8gx4dinw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0022-future-garagewave-mix-february-iii-2as3-uwmtwi.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0023-future-garagewave-mix-february-v-7eshdsm346i.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0024-future-garagewave-mix-february-vi-h-v-hcvatm.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0025-future-garagewave-mix-february-viii-jhachf-k-iq.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0026-future-garagewave-mix-january-iii-tdfribrvile.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0027-future-garagewave-mix-january-iv-omy9-y53iee.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0028-future-garagewave-mix-january-v-5kjja8worxc.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0029-future-garagewave-mix-january-vi-0ialahjct1a.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0030-future-garagewave-mix-january-viii-zy6puvnrrwq.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0031-future-garagewave-mix-june-ii-9yg6fdt9r3i.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0032-future-garagewave-mix-june-iv-sxztm047o6c.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0033-future-garagewave-mix-june-v-g2ltznd-sxe.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0034-future-garagewave-mix-june-vi-opr4ujx-ido.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0035-future-garagewave-mix-june-viii-tcdwxru1hhy.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0036-future-garagewave-mix-march-iv-qb5zibscpsu.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0037-future-garagewave-mix-march-v-ajf-3jgovww.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0038-future-garagewave-mix-march-viii-m2gthsd54uw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0039-future-garagewave-mix-may-iii-zvouakbnclo.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0040-future-garagewave-mix-may-v-trfriritylk.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0041-future-garagewave-mix-may-vi-bqqprq-gunu.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0042-future-garagewave-mix-may-vii-117kxxolgac.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0043-future-garagewave-mix-november-iii-we2bfsb54v4.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0044-future-garagewave-mix-november-iv-dgfjwpqhsak.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0045-future-garagewave-mix-november-vi-a3fkuroxyw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0046-future-garagewave-mix-november-vii-iuevzgwhwhi.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0047-future-garagewave-mix-november-viii-3tgstw-tuzw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0048-future-garagewave-mix-october-iv-v2y7wcutki0.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0049-future-garagewave-mix-october-ix-3nzn0ubcclk.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0050-future-garagewave-mix-october-v-ugeczuquej8.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0051-future-garagewave-mix-october-vi-img-hha2trq.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0052-future-garagewave-mix-october-vii-i4rko4dhfw0.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0053-future-garagewave-mix-october-viii-ew-wvy4f50u.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0054-future-garagewave-mix-september-ii-fxbhwcvanpw.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0055-future-garagewave-mix-september-iii-kgocrwzg468.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0056-future-garagewave-mix-september-iv-iztmxyr9ky8.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0057-future-garagewave-mix-september-vi-vqv7dboqvnq.mp3",
+      "silences": []
+    },
+    {
+      "file": "C:\\Projects\\yt-downloader\\Selected10G\\future-garage-0058-future-garagewave-mix-september-vii-kfkwvfjy0uw.mp3",
+      "silences": []
+    }
+  ]
+}

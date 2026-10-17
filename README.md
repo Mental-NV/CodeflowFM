@@ -50,6 +50,10 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 
 The chooser scales to multiple stations without changing the player. Only available stations are displayed; there is no placeholder Lo-Fi station.
 
+## Audio maintenance tools
+
+Use the [silence detection CLI](tools/detect-silence.md) to scan local MP3 files for long silent sections and produce timestamped text or JSON reports.
+
 ## Implementation decisions
 
 See [implementation notes](docs/03-implementation-notes.md) for the spec reconciliation and low-fidelity structure. The frontend uses browser-native JavaScript, CSS, and one persistent audio element. The small Node scripts are only local development/build tools.

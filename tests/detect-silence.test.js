@@ -32,8 +32,8 @@ test('parser handles multiple intervals, scientific notation, and trailing silen
   parser.line('[silencedetect @ 000001] silence_start: 1e1');
   parser.line('[silencedetect @ 000001] silence_end: 12 | silence_duration: 2');
   assert.deepEqual(parser.silences, [
-    { startSec: 0, endSec: 2.5, durationSec: 2.5 },
-    { startSec: 10, endSec: 12, durationSec: 2 },
+    { startSec: 0, endSec: 2.5, durationSec: 2.5, startTime: '00:00:00.000', endTime: '00:00:02.500' },
+    { startSec: 10, endSec: 12, durationSec: 2, startTime: '00:00:10.000', endTime: '00:00:12.000' },
   ]);
   assert.equal(parser.incomplete, false);
   assert.equal(timestamp(3599.9996), '01:00:00.000');
@@ -78,9 +78,19 @@ test('CLI scans real MP3 audio, reports decoding errors, and saves JSON', async 
   const report = JSON.parse(await readFile(output, 'utf8'));
   assert.deepEqual(report.summary, { totalFiles: 6, scannedFiles: 5, failedFiles: 1, filesWithSilence: 3, silentSections: 4 });
   const get = (name) => report.files.find((file) => path.basename(file.file) === name);
-  assert.match(get('broken.mp3').error, /FFmpeg failed/);
-  assert.deepEqual(get('continuous.mp3').silences, []);
-  assert.deepEqual(get('one active channel.mp3').silences, [], 'a single silent channel is not a silent track');
+  assert.equal(report.errors.length, 1);
+  assert.equal(path.basename(report.errors[0].file), 'broken.mp3');
+  assert.match(report.errors[0].error, /FFmpeg failed/);
+  assert.equal(report.files.length, 3);
+  assert.equal(get('broken.mp3'), undefined, 'failed scans belong in errors');
+  assert.equal(get('continuous.mp3'), undefined, 'clean tracks must be omitted');
+  assert.equal(get('one active channel.mp3'), undefined, 'a single silent channel is not a silent track');
+  for (const file of report.files) {
+    for (const silence of file.silences) {
+      assert.equal(silence.startTime, timestamp(silence.startSec));
+      assert.equal(silence.endTime, timestamp(silence.endSec));
+    }
+  }
   const gaps = get('Трек with gaps.MP3').silences;
   assert.equal(gaps.length, 2);
   for (const [actual, expected] of [[gaps[0].startSec, 1], [gaps[0].endSec, 3], [gaps[1].startSec, 4], [gaps[1].endSec, 6],
@@ -93,6 +103,8 @@ test('CLI scans real MP3 audio, reports decoding errors, and saves JSON', async 
   assert.equal(await readFile(output, 'utf8'), before, 'existing reports must not be overwritten');
   const empty = JSON.parse((await exec(process.execPath, [cli, dir, '--format', 'json'])).stdout);
   assert.equal(empty.summary.totalFiles, 0, 'subdirectories are opt-in');
+  assert.deepEqual(empty.files, []);
+  assert.deepEqual(empty.errors, []);
   await assert.rejects(exec(process.execPath, [cli, dir, '--output', path.join(nested, 'continuous.mp3')]), /must not have an .mp3/);
   await assert.rejects(exec(process.execPath, [cli, dir, '--ffmpeg', 'missing-ffmpeg-for-test']), /Cannot start FFmpeg/);
 });

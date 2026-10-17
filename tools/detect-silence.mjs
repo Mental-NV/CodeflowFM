@@ -86,7 +86,10 @@ export function createSilenceParser() {
       if (finish && start !== null) {
         const end = Number(finish[1]);
         if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
-          silences.push({ startSec: start, endSec: end, durationSec: Number((end - start).toFixed(6)) });
+          silences.push({
+            startSec: start, endSec: end, durationSec: Number((end - start).toFixed(6)),
+            startTime: timestamp(start), endTime: timestamp(end),
+          });
         }
         start = null;
       }
@@ -145,7 +148,7 @@ export function textReport(report) {
   ];
   if (summary.totalFiles === 0) lines.push('', 'No MP3 files found.');
   else if (summary.scannedFiles > 0 && summary.silentSections === 0) lines.push('', 'No qualifying silence found in successfully scanned files.');
-  for (const result of report.files) {
+  for (const result of [...report.files, ...(report.errors ?? [])]) {
     if (result.error) lines.push('', `ERROR: ${result.file}`, result.error);
     else if (result.silences.length) {
       lines.push('', result.file);
@@ -194,7 +197,8 @@ export async function main(args = process.argv.slice(2)) {
       filesWithSilence: successful.filter((result) => result.silences.length > 0).length,
       silentSections: successful.reduce((total, result) => total + result.silences.length, 0),
     },
-    files: results,
+    files: successful.filter((result) => result.silences.length > 0),
+    errors: results.filter((result) => result.error),
   };
   const output = options.format === 'json' ? `${JSON.stringify(report, null, 2)}\n` : textReport(report);
   if (options.output) {

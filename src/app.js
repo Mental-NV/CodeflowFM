@@ -1,4 +1,4 @@
-import { RadioPlayer, prepareStation, readPreferences, savePreferences } from './radio.js';
+import { RadioPlayer, prepareStation, readPreferences, savePreferences, supportsVolumeControl } from './radio.js';
 import { installScrollbar } from './scrollbar.js';
 
 const element = id => document.getElementById(id);
@@ -6,7 +6,8 @@ const audio = element('radio-audio');
 let storage;
 try { storage = window.localStorage; } catch { /* Storage can be blocked by browser settings. */ }
 const preferences = readPreferences(storage);
-audio.volume = preferences.volume;
+const adjustableVolume = supportsVolumeControl(audio);
+if (adjustableVolume) audio.volume = preferences.volume;
 audio.muted = preferences.muted;
 const cards = new Map();
 let lastMetadata = '';
@@ -17,13 +18,15 @@ const compactPlayer = window.matchMedia('(max-width: 1000px)');
 const volumeControl = element('volume-control');
 const volumeToggle = element('volume-toggle');
 const volumePanel = element('volume-panel');
+volumeControl.hidden = !adjustableVolume;
+element('volume').disabled = !adjustableVolume;
 
 function setVolumePanelOpen(open, restoreFocus = false) {
-  const expanded = compactPlayer.matches && open;
-  volumePanel.hidden = compactPlayer.matches && !expanded;
+  const expanded = adjustableVolume && compactPlayer.matches && open;
+  volumePanel.hidden = !adjustableVolume || (compactPlayer.matches && !expanded);
   volumeToggle.setAttribute('aria-expanded', String(expanded));
   if (expanded) element('volume').focus();
-  else if (restoreFocus) (compactPlayer.matches ? volumeToggle : element('volume')).focus();
+  else if (adjustableVolume && restoreFocus) (compactPlayer.matches ? volumeToggle : element('volume')).focus();
 }
 
 volumeToggle.addEventListener('click', () => {
@@ -108,8 +111,10 @@ function render() {
   element('mute-label').textContent = muted ? 'Unmute' : 'Mute';
   element('sound-waves').toggleAttribute('hidden', muted);
   element('sound-cross').toggleAttribute('hidden', !muted);
-  element('volume').value = String(Math.round(audio.volume * 100));
-  element('volume-value').value = `${Math.round(audio.volume * 100)}%`;
+  if (adjustableVolume) {
+    element('volume').value = String(Math.round(audio.volume * 100));
+    element('volume-value').value = `${Math.round(audio.volume * 100)}%`;
+  }
 
   const track = station && !['ready', 'idle', 'unsupported'].includes(player.state) ? station.tracks[player.trackIndex] : null;
   const metadata = [track?.artist, track?.title].filter(Boolean).join(' - ');
@@ -125,7 +130,7 @@ function render() {
       : 'Continuous radio';
   }
   document.title = station && playing ? `${station.name} — Codeflow FM` : 'Codeflow FM — Background radio';
-  const saved = { stationId: station?.id ?? preferences.stationId, volume: audio.volume, muted: audio.muted };
+  const saved = { stationId: station?.id ?? preferences.stationId, volume: adjustableVolume ? audio.volume : preferences.volume, muted: audio.muted };
   const serialized = JSON.stringify(saved);
   if (serialized !== lastSaved) { savePreferences(storage, saved); lastSaved = serialized; }
 
@@ -141,6 +146,7 @@ function render() {
 
 element('play-toggle').addEventListener('click', () => player.toggle());
 element('volume').addEventListener('input', event => {
+  if (!adjustableVolume) return;
   const audio = player.audio;
   audio.volume = Number(event.target.value) / 100;
   if (audio.volume > 0) audio.muted = false;
@@ -150,7 +156,7 @@ element('mute-toggle').addEventListener('click', () => {
   const audio = player.audio;
   if (audio.muted || audio.volume === 0) {
     audio.muted = false;
-    if (audio.volume === 0) audio.volume = preferences.volume || 0.7;
+    if (adjustableVolume && audio.volume === 0) audio.volume = preferences.volume || 0.7;
   } else audio.muted = true;
   render();
 });

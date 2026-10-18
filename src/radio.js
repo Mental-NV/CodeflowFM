@@ -9,6 +9,21 @@ export function supportsWebmOpus(audio) {
   return support === 'probably' || support === 'maybe';
 }
 
+// iOS can ignore media volume assignments. Probe before playback instead of
+// relying on browser names (including Firefox on iOS and iPad desktop mode).
+export function supportsVolumeControl(audio) {
+  const original = audio.volume;
+  const probe = original === 0.5 ? 0.25 : 0.5;
+  try {
+    audio.volume = probe;
+    return audio.volume === probe;
+  } catch {
+    return false;
+  } finally {
+    try { audio.volume = original; } catch { /* Some browsers expose read-only volume. */ }
+  }
+}
+
 export function readPreferences(storage) {
   try {
     const value = JSON.parse(storage.getItem(STORAGE_KEY));

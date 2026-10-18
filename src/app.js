@@ -124,9 +124,11 @@ function render() {
     const current = station?.id === id;
     card.dataset.current = String(current);
     card.setAttribute('aria-disabled', String(current && playing));
-    card.querySelector('.station-state').textContent = current
-      ? ({ playing: muted ? 'Muted' : 'On air', loading: 'Loading…', paused: 'Paused', ready: 'Selected', error: 'Unavailable' }[player.state] ?? 'Continuous radio')
-      : 'Continuous radio';
+    const stationState = card.querySelector('.station-state');
+    stationState.textContent = current
+      ? ({ playing: muted ? 'Muted' : 'On air', loading: 'Loading…', paused: 'Paused', ready: 'Selected', error: 'Unavailable' }[player.state] ?? '')
+      : '';
+    stationState.hidden = !stationState.textContent;
   }
   document.title = station && playing ? `${station.name} — Codeflow FM` : 'Codeflow FM — Background radio';
   const saved = { stationId: station?.id ?? preferences.stationId, volume: adjustableVolume ? audio.volume : preferences.volume, muted: audio.muted };
@@ -182,7 +184,7 @@ async function loadStations() {
     const results = await Promise.allSettled(catalog.stations.map(async entry => prepareStation(entry, await readJSON(entry.playlist))));
     const stations = results.filter(result => result.status === 'fulfilled').map(result => result.value);
     if (!stations.length) throw new Error('No playable stations');
-    for (const [index, station] of stations.entries()) {
+    for (const station of stations) {
       if (cards.has(station.id)) continue;
       const card = document.createElement('button');
       card.type = 'button';
@@ -197,13 +199,13 @@ async function loadStations() {
       artwork.addEventListener('error', () => { artwork.src = './assets/future-garage.svg'; }, { once: true });
       const copy = document.createElement('span');
       for (const [className, text] of [
-        ['station-number', `STATION ${String(index + 1).padStart(2, '0')}`],
         ['station-name', station.name], ['station-description', station.description ?? 'Continuous music for your work session.'],
-        ['station-state', 'Continuous radio'],
+        ['station-state', ''],
       ]) {
         const span = document.createElement('span');
         span.className = className;
         span.textContent = text;
+        span.hidden = className === 'station-state';
         copy.append(span);
       }
       card.append(artwork, copy);

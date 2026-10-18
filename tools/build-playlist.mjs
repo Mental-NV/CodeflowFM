@@ -11,6 +11,7 @@
 //
 // Notes:
 // - Default mode is rename (destructive). Use --dryRun first.
+// - Requires ffprobe (from FFmpeg) on PATH to validate MP3 containers/codecs.
 // - If you install `music-metadata`, the script will read ID3 tags (artist/title).
 //     npm i music-metadata
 // - Without music-metadata, it falls back to the original filename (sanitized).
@@ -21,6 +22,8 @@ import path from "node:path";
 import { homedir } from "node:os";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +32,9 @@ const DEFAULT_STATION_ID = "future-garage";
 const DEFAULT_STATION_NAME = "Future Garage";
 
 class ArgumentError extends Error {}
+class AudioValidationError extends Error {}
+
+const runFile = promisify(execFile);
 
 const STRING_OPTIONS = new Set(["dir", "out", "mode", "baseUrl", "stationId", "stationName"]);
 const BOOLEAN_OPTIONS = new Set(["recursive", "dryRun"]);
@@ -169,6 +175,34 @@ async function sha256File(filePath) {
   });
 }
 
+async function validateMp3(filePath) {
+  let stdout;
+  try {
+    ({ stdout } = await runFile("ffprobe", [
+      "-v", "error", "-show_entries", "format=format_name:stream=codec_name,codec_type",
+      "-of", "json", filePath,
+    ], { timeout: 30000, maxBuffer: 1024 * 1024 }));
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      throw new AudioValidationError("MP3 validation requires ffprobe. Install FFmpeg and ensure ffprobe is on PATH.");
+    }
+    throw new AudioValidationError(`Could not validate MP3 audio: ${filePath}. ${err.stderr?.trim() || err.message}`);
+  }
+
+  let probe;
+  try {
+    probe = JSON.parse(stdout);
+  } catch {
+    throw new AudioValidationError(`Could not validate MP3 audio: ${filePath}. ffprobe returned invalid JSON.`);
+  }
+  const format = probe?.format?.format_name;
+  const audio = Array.isArray(probe?.streams) ? probe.streams.filter((stream) => stream.codec_type === "audio") : [];
+  if (format !== "mp3" || !audio.length || audio.some((stream) => stream.codec_name !== "mp3")) {
+    const codecs = audio.map((stream) => stream.codec_name || "unknown").join(", ") || "no audio";
+    throw new AudioValidationError(`Invalid MP3 audio: ${filePath}. Detected container: ${format || "unknown"}; audio codec: ${codecs}. Expected an MP3 container with MP3 audio. Renaming a file to .mp3 does not convert it.`);
+  }
+}
+
 async function tryReadTags(filePath) {
   // Optional dependency: music-metadata
   // npm i music-metadata
@@ -232,6 +266,10 @@ async function main() {
     console.error(`No .mp3 files found in: ${dir}`);
     process.exit(1);
   }
+
+  // Validate the whole batch before creating outputs or changing any audio,
+  // including in dry-run mode. Extensions alone do not establish the format.
+  for (const file of files) await validateMp3(file);
 
   await ensureDir(outDir);
 
@@ -337,6 +375,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err instanceof ArgumentError ? `Error: ${err.message}` : err);
+  console.error(err instanceof ArgumentError || err instanceof AudioValidationError ? `Error: ${err.message}` : err);
   process.exitCode = err instanceof ArgumentError ? 2 : 1;
 });

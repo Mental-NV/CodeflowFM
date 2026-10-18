@@ -7,15 +7,18 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+const builderPath = fileURLToPath(new URL('../tools/build-playlist.mjs', import.meta.url));
+const audioFixture = name => readFile(new URL(`./fixtures/audio/${name}`, import.meta.url));
+const mp3Bytes = await audioFixture('mp3.mp3');
+
 test('playlist builder copies only MP3 files and emits the MP3-only canonical schema', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-'));
   try {
     const input = join(directory, 'input');
     const output = join(directory, 'output');
     await mkdir(input);
-    // Naming and copying do not transcode or inspect the encoded audio.
-    await writeFile(join(input, 'A.MP3'), 'uppercase mp3 bytes');
-    await writeFile(join(input, 'B.mp3'), 'mp3 bytes');
+    await writeFile(join(input, 'A.MP3'), mp3Bytes);
+    await writeFile(join(input, 'B.mp3'), mp3Bytes);
     await writeFile(join(input, 'ignore.WEBM'), 'webm bytes');
     await writeFile(join(input, 'ignore.opus'), 'opus bytes');
     await writeFile(join(input, 'ignore.webp'), 'image bytes');
@@ -29,7 +32,7 @@ test('playlist builder copies only MP3 files and emits the MP3-only canonical sc
       assert.equal(mp3.mime, 'audio/mpeg');
       assert.match(mp3.filename, /\.mp3$/);
       assert.equal(mp3.url, `https://example.com/audio/${mp3.filename}`);
-      assert.equal(await readFile(join(output, mp3.filename), 'utf8'), await readFile(join(input, mp3.originalName), 'utf8'));
+      assert.deepEqual(await readFile(join(output, mp3.filename)), await readFile(join(input, mp3.originalName)));
     }
     assert.equal(await readFile(join(input, 'ignore.WEBM'), 'utf8'), 'webm bytes');
     assert.equal(await readFile(join(input, 'ignore.opus'), 'utf8'), 'opus bytes');
@@ -50,7 +53,7 @@ test('recursive playlist renaming leaves non-MP3 audio untouched', async () => {
     const nested = join(input, 'nested');
     const output = join(directory, 'output');
     await mkdir(nested, { recursive: true });
-    await writeFile(join(nested, 'A.MP3'), 'mp3 bytes');
+    await writeFile(join(nested, 'A.MP3'), mp3Bytes);
     await writeFile(join(nested, 'B.webm'), 'webm bytes');
     await writeFile(join(nested, 'C.opus'), 'opus bytes');
     await promisify(execFile)(process.execPath, [
@@ -60,7 +63,7 @@ test('recursive playlist renaming leaves non-MP3 audio untouched', async () => {
     const playlist = JSON.parse(await readFile(join(output, 'playlist.json'), 'utf8'));
     assert.equal(playlist.tracks.length, 1);
     assert.equal(playlist.tracks[0].mime, 'audio/mpeg');
-    assert.equal(await readFile(join(output, playlist.tracks[0].filename), 'utf8'), 'mp3 bytes');
+    assert.deepEqual(await readFile(join(output, playlist.tracks[0].filename)), mp3Bytes);
     assert.deepEqual((await readdir(nested)).sort(), ['B.webm', 'C.opus']);
     assert.equal(await readFile(join(nested, 'B.webm'), 'utf8'), 'webm bytes');
     assert.equal(await readFile(join(nested, 'C.opus'), 'utf8'), 'opus bytes');
@@ -109,7 +112,7 @@ test('playlist builder resolves absolute, relative, and home directory paths', a
         const input = join(home, 'Projects', 'Yt-Download', 'lofi-beats');
         const output = join(home, 'Prepared Audio');
         await mkdir(input, { recursive: true });
-        await writeFile(join(input, 'A.mp3'), 'mp3 bytes');
+        await writeFile(join(input, 'A.mp3'), mp3Bytes);
         await promisify(execFile)(process.execPath, [
           fileURLToPath(new URL('../tools/build-playlist.mjs', import.meta.url)),
           '--dir', format(input, home), '--out', '~\\Prepared Audio', '--mode', 'copy',
@@ -119,8 +122,8 @@ test('playlist builder resolves absolute, relative, and home directory paths', a
         });
         const playlist = JSON.parse(await readFile(join(output, 'playlist.json'), 'utf8'));
         assert.equal(playlist.tracks.length, 1);
-        assert.equal(await readFile(join(output, playlist.tracks[0].filename), 'utf8'), 'mp3 bytes');
-        assert.equal(await readFile(join(input, 'A.mp3'), 'utf8'), 'mp3 bytes');
+        assert.deepEqual(await readFile(join(output, playlist.tracks[0].filename)), mp3Bytes);
+        assert.deepEqual(await readFile(join(input, 'A.mp3')), mp3Bytes);
         const [mapping] = JSON.parse(await readFile(join(output, 'rename-map.json'), 'utf8'));
         assert.equal(mapping.from, join(input, 'A.mp3'));
         assert.equal(mapping.to, join(output, playlist.tracks[0].filename));
@@ -197,8 +200,8 @@ test('playlist boolean flags accept bare flags and explicit true or false values
   try {
     const input = join(directory, 'input');
     await mkdir(join(input, 'nested'), { recursive: true });
-    await writeFile(join(input, 'A.mp3'), 'root bytes');
-    await writeFile(join(input, 'nested', 'B.mp3'), 'nested bytes');
+    await writeFile(join(input, 'A.mp3'), mp3Bytes);
+    await writeFile(join(input, 'nested', 'B.mp3'), mp3Bytes);
     for (const [index, value] of [undefined, 'TRUE', '1', 'yes', 'y', 'on', 'FALSE', '0', 'no', 'n', 'off'].entries()) {
       await t.test(value ?? 'bare flags', async () => {
         const enabled = index < 6;
@@ -216,9 +219,92 @@ test('playlist boolean flags accept bare flags and explicit true or false values
         assert.deepEqual(playlist.station, { id: 'lofi', name: 'Lofi Beats' });
         const outputFiles = await readdir(output);
         assert.equal(outputFiles.filter((file) => file.endsWith('.mp3')).length, enabled ? 0 : 1);
-        assert.equal(await readFile(join(input, 'A.mp3'), 'utf8'), 'root bytes');
+        assert.deepEqual(await readFile(join(input, 'A.mp3')), mp3Bytes);
       });
     }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('codec validation rejects mislabeled and unreadable MP3 files before changing the batch', async (t) => {
+  const cases = [
+    ['AAC in fragmented MP4', await audioFixture('aac.mp4'), /container: mov,mp4,m4a,3gp,3g2,mj2; audio codec: aac/],
+    ['MP3 in MP4', await audioFixture('mp3.mp4'), /container: mov,mp4,m4a,3gp,3g2,mj2; audio codec: mp3/],
+    ['MPEG Layer II', await audioFixture('mp2.mp2'), /container: mp3; audio codec: mp2/],
+    ['garbage with an ID3 prefix', Buffer.from('ID3 invalid audio'), /Could not validate MP3 audio/],
+    ['empty file', Buffer.alloc(0), /Could not validate MP3 audio/],
+  ];
+  for (const [name, bytes, message] of cases) {
+    for (const [mode, flags] of [['rename', []], ['copy', ['--mode', 'copy']], ['dry run', ['--dryRun']]]) {
+      await t.test(`${name}, ${mode}`, async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-codecs-'));
+        try {
+          const input = join(directory, 'input');
+          const output = join(directory, 'output');
+          await mkdir(input);
+          // A valid file sorts first, so a later failure must still leave it untouched.
+          await writeFile(join(input, 'A.mp3'), mp3Bytes);
+          await writeFile(join(input, 'Z.mp3'), bytes);
+          await assert.rejects(promisify(execFile)(process.execPath, [
+            builderPath, '--dir', input, '--out', output, ...flags,
+          ]), error => {
+            assert.equal(error.code, 1);
+            assert.match(error.stderr, message);
+            assert.ok(error.stderr.includes(join(input, 'Z.mp3')));
+            assert.equal(error.stdout, '');
+            return true;
+          });
+          assert.deepEqual((await readdir(input)).sort(), ['A.mp3', 'Z.mp3']);
+          assert.deepEqual(await readFile(join(input, 'A.mp3')), mp3Bytes);
+          assert.deepEqual(await readFile(join(input, 'Z.mp3')), bytes);
+          await assert.rejects(readdir(output), { code: 'ENOENT' });
+        } finally {
+          await rm(directory, { recursive: true, force: true });
+        }
+      });
+    }
+  }
+});
+
+test('failed codec validation preserves existing output artifacts in dry run', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-preserve-'));
+  try {
+    const input = join(directory, 'input');
+    const output = join(directory, 'output');
+    await mkdir(input);
+    await mkdir(output);
+    await writeFile(join(input, 'mislabeled.mp3'), await audioFixture('aac.mp4'));
+    const artifacts = ['playlist.json', 'playlist.schema.json', 'rename-map.json'];
+    for (const name of artifacts) await writeFile(join(output, name), `original ${name}`);
+    await assert.rejects(promisify(execFile)(process.execPath, [
+      builderPath, '--dir', input, '--out', output, '--dryRun',
+    ]), error => error.code === 1 && /Invalid MP3 audio/.test(error.stderr));
+    assert.deepEqual((await readdir(output)).sort(), [...artifacts].sort());
+    for (const name of artifacts) assert.equal(await readFile(join(output, name), 'utf8'), `original ${name}`);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('missing ffprobe fails with installation guidance before creating outputs', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-no-ffprobe-'));
+  try {
+    const input = join(directory, 'input');
+    const output = join(directory, 'output');
+    const emptyPath = join(directory, 'empty-path');
+    await mkdir(input);
+    await mkdir(emptyPath);
+    await writeFile(join(input, 'A.mp3'), mp3Bytes);
+    await assert.rejects(promisify(execFile)(process.execPath, [
+      builderPath, '--dir', input, '--out', output,
+    ], { env: { ...process.env, PATH: emptyPath } }), error => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /requires ffprobe.*Install FFmpeg.*PATH/);
+      return true;
+    });
+    assert.deepEqual(await readFile(join(input, 'A.mp3')), mp3Bytes);
+    await assert.rejects(readdir(output), { code: 'ENOENT' });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

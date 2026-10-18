@@ -50,7 +50,7 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 2. Add an entry to `assets/stations.json` with `id`, `name`, `description`, `artwork`, and `playlist`. Paths are relative to the app root, for example `./assets/another-playlist.json`.
 3. Match the catalog entry's `id` to the playlist's `station.id`, and run the build again.
 
-The chooser scales to multiple stations without changing the player. Only available stations are displayed; there is no placeholder Lo-Fi station.
+The chooser scales to multiple stations without changing the player. The catalog includes Future Garage and Lo-Fi Beats.
 
 Serve WebM files with the HTTP `Content-Type: audio/webm` header and byte-range support so the browser can seek into long tracks. Changing a playlist's MIME type does not convert audio: upload actual Opus-encoded WebM files and update the filenames, URLs, hashes, sizes, and durations. The included Future Garage playlist still points to its existing MP3 library.
 

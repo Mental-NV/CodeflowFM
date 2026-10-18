@@ -6,6 +6,13 @@
       "description": "Atmospheric, rhythmic, forward-moving.",
       "artwork": "./assets/future-garage.svg",
       "playlist": "./assets/future-garage.json"
+    },
+    {
+      "id": "lofi-beats",
+      "name": "Lo-Fi Beats",
+      "description": "Warm, mellow beats for study and focus.",
+      "artwork": "./assets/lofi-beats.svg",
+      "playlist": "./assets/lofi-beats.json"
     }
   ]
 }

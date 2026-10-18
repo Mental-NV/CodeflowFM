@@ -23,13 +23,11 @@ button, a, input, [tabindex] { -webkit-tap-highlight-color: transparent; }
 .header-caption { color: var(--muted); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
 .main { min-height: 0; width: 100%; max-width: 1600px; margin: 0 auto; padding: clamp(24px, 5vh, 56px) clamp(24px, 5vw, 80px) 20px; display: flex; flex-direction: column; }
 .intro { flex: 0 0 auto; }
-.eyebrow { margin: 0 0 16px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.7px; }
 h1 { margin: 0; font-size: clamp(30px, 3.5vw, 48px); line-height: 1.15; letter-spacing: -1.8px; font-weight: 500; }
 h1 span { color: var(--muted); }
 .intro-description { margin: 18px 0 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
-.section-heading { display: flex; justify-content: space-between; align-items: center; margin: clamp(24px, 4vh, 42px) 0 16px; }
 h2 { font-size: 14px; font-weight: 500; margin: 0; }
-.chooser-frame { position: relative; min-height: 0; flex: 1; }
+.chooser-frame { position: relative; min-height: 0; flex: 1; margin-top: clamp(24px, 4vh, 42px); }
 .station-chooser { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; padding: 6px 18px 18px 6px; margin-left: -6px; }
 .station-chooser::-webkit-scrollbar { display: none; }
 .station-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 345px), 1fr)); gap: 22px; align-content: start; }
@@ -92,11 +90,12 @@ input[type="range"] { width: 100%; min-height: 24px; margin: 0; cursor: pointer;
   .site-header { min-height: 68px; }
   .brand { font-size: 22px; }
   .header-caption { font-size: 9px; max-width: 90px; text-align: right; line-height: 1.5; }
-  .main { padding-top: 28px; padding-bottom: 12px; }
-  h1 { font-size: 34px; letter-spacing: -1.3px; }
-  .eyebrow { font-size: 9px; margin-bottom: 12px; }
-  .intro-description { font-size: 12px; margin-top: 14px; max-width: 280px; }
-  .section-heading { margin-top: 28px; margin-bottom: 12px; }
+  .main { padding-top: 18px; padding-bottom: 12px; }
+  h1 { font-size: clamp(16px, 4.2vw, 28px); letter-spacing: -.5px; white-space: nowrap; }
+  h1 br { display: none; }
+  h1 span::before { content: " "; }
+  .intro-description { display: none; }
+  .chooser-frame { margin-top: 18px; }
   .station-grid { grid-template-columns: minmax(0, 1fr); }
   .station-card { padding: 14px; grid-template-columns: 88px minmax(0, 1fr); gap: 15px; }
   .station-name { font-size: 18px; }
@@ -113,11 +112,11 @@ input[type="range"] { width: 100%; min-height: 24px; margin: 0; cursor: pointer;
 @media (max-height: 650px) {
   .site-header { min-height: 56px; }
   .main { padding-top: 18px; }
-  .eyebrow, .intro-description { display: none; }
-  h1 { font-size: 27px; }
+  .intro-description { display: none; }
+  h1 { font-size: clamp(16px, 4.2vw, 27px); }
   h1 br { display: none; }
   h1 span::before { content: " "; }
-  .section-heading { margin-top: 18px; }
+  .chooser-frame { margin-top: 18px; }
 }
 @media (max-width: 480px) {
   .player { grid-template-columns: 36px minmax(0, 1fr) auto; padding-left: 12px; padding-right: 12px; gap: 8px; }

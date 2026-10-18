@@ -83,7 +83,6 @@ function render() {
   const playing = player.state === 'playing';
   const unsupported = player.state === 'unsupported';
   element('browser-message').hidden = !unsupported;
-  element('stations-heading').hidden = unsupported;
   element('chooser-frame').hidden = unsupported;
   const status = {
     idle: 'Choose a station to begin.', ready: 'Ready to play',

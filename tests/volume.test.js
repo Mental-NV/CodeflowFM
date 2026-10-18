@@ -1,36 +1,39 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supportsVolumeControl, STORAGE_KEY } from '../src/radio.js';
+import { hideVolumeControl, STORAGE_KEY } from '../src/radio.js';
 
-test('volume detection preserves the starting level, including zero and the probe value', () => {
-  for (const volume of [0, 0.25, 0.5, 0.7, 1]) {
-    const audio = { volume };
-    assert.equal(supportsVolumeControl(audio), true);
-    assert.equal(audio.volume, volume);
+const hiddenBrowsers = [
+  { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1' },
+  { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/130.0 Mobile/15E148 Safari/605.1.15' },
+  { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Safari/605.1.15' },
+  { userAgent: 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1' },
+  { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 5 },
+  { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 CriOS/130 Version/18.0 Safari/605.1.15' },
+  { userAgent: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' },
+  { userAgent: 'Mozilla/5.0 (Android 14; Mobile; rv:130.0) Gecko/130.0 Firefox/130.0' },
+  { userAgent: 'Mozilla/5.0 (Android 14; Tablet; rv:130.0) Gecko/130.0 Firefox/130.0' },
+];
+
+test('hardcoded mobile browser rules cover iOS Chrome, Firefox, and iPads plus Android Chrome/Firefox', () => {
+  for (const browser of hiddenBrowsers) {
+    assert.equal(hideVolumeControl(browser), true, browser.userAgent);
   }
 });
 
-test('iOS-style ignored assignments cannot be mistaken for working volume control', () => {
-  for (const volume of [0.5, 1]) {
-    const audio = { get volume() { return volume; }, set volume(value) {} };
-    assert.equal(supportsVolumeControl(audio), false);
-    assert.equal(audio.volume, volume);
+test('desktop Chrome, Firefox, and Safari keep volume controls', () => {
+  for (const userAgent of [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) Gecko/20100101 Firefox/130.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15',
+  ]) {
+    assert.equal(hideVolumeControl({ userAgent, platform: 'MacIntel', maxTouchPoints: 0 }), false);
   }
+  assert.equal(hideVolumeControl(), false);
 });
 
-test('read-only and throwing volume properties fall back without breaking startup', () => {
-  const readOnly = Object.freeze({ volume: 1 });
-  const throwing = {
-    get volume() { return 1; },
-    set volume(value) { throw new Error('Volume is controlled by the device'); },
-  };
-  assert.equal(supportsVolumeControl(readOnly), false);
-  assert.equal(supportsVolumeControl(throwing), false);
-});
-
-// Exercise the actual app handlers with device-controlled and writable media
-// elements, without requiring an iPhone or making audio/network requests.
-async function loadApp(t, deviceVolume) {
+// Mobile stubs deliberately accept volume writes: browser identifiers must hide
+// the control even when the previous capability probe would have succeeded.
+async function loadApp(t, browser) {
   const originals = new Map();
   const replace = (name, value) => {
     originals.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
@@ -49,8 +52,8 @@ async function loadApp(t, deviceVolume) {
     currentTime = 0;
     scrollHeight = 0;
     clientHeight = 0;
-    get volume() { return deviceVolume ? 1 : this.volumeLevel; }
-    set volume(value) { if (!deviceVolume) this.volumeLevel = value; }
+    get volume() { return this.volumeLevel; }
+    set volume(value) { this.volumeLevel = value; }
     canPlayType() { return 'probably'; }
     setAttribute(name, value) { this.attributes.set(name, value); }
     getAttribute(name) { return this.attributes.get(name); }
@@ -74,17 +77,18 @@ async function loadApp(t, deviceVolume) {
   };
   replace('document', document);
   replace('window', Object.assign(new EventTarget(), { localStorage: storage, matchMedia: () => media }));
-  replace('navigator', {});
+  replace('navigator', browser);
   replace('Audio', Node);
   replace('ResizeObserver', class { observe() {} });
   replace('fetch', async () => ({ ok: true, json: async () => ({ stations: [] }) }));
-  await import(`../src/app.js?device-volume=${deviceVolume}`);
+  await import(`../src/app.js?browser=${encodeURIComponent(JSON.stringify(browser))}`);
   await new Promise(resolve => setImmediate(resolve));
   return { element, document, saved: () => JSON.parse(saved) };
 }
 
-test('unsupported volume UI is hidden while mute and saved preferences remain available', async t => {
-  const { element, document, saved } = await loadApp(t, true);
+for (const browser of hiddenBrowsers) {
+test(`mobile volume control stays hidden for ${browser.userAgent}`, async t => {
+  const { element, document, saved } = await loadApp(t, browser);
   assert.equal(element('volume-control').hidden, true);
   assert.equal(element('volume').disabled, true);
   assert.equal(element('volume-panel').hidden, true);
@@ -99,9 +103,10 @@ test('unsupported volume UI is hidden while mute and saved preferences remain av
   assert.equal(element('radio-audio').muted, false);
   assert.equal(saved().volume, 0.32);
 });
+}
 
 test('writable volume UI keeps the slider, applies changes, and unmutes', async t => {
-  const { element, document, saved } = await loadApp(t, false);
+  const { element, document, saved } = await loadApp(t, { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0 Safari/537.36' });
   assert.equal(element('volume-control').hidden, false);
   assert.equal(element('radio-audio').volume, 0.32);
   element('volume-toggle').dispatchEvent(new Event('click'));

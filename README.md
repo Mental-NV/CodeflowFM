@@ -41,7 +41,7 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 - Local storage remembers the selected station, volume, and mute setting. Refreshing never starts audio automatically. Listening still works if storage is unavailable.
 - The player shows loading, playing, paused, muted, and recoverable error states. After a playback/network error, click Play or the station card to retry. A stalled connection times out after 25 seconds.
 - The browser streams audio directly from the playlist URLs. A fast first start depends on the connection and audio host. Tracks are not downloaded or cached for offline use. Mobile browsers and operating systems may suspend background playback.
-- The player hides the volume control when the browser does not support volume changes, including on iOS. Mute remains available. Browsers that support volume changes show the slider. Device-controlled volume does not overwrite the saved slider level.
+- The player hides the volume control on iOS and in mobile Chrome and Firefox using browser/device identifiers. All iOS browsers are covered because Firefox can identify as Safari; iPads in desktop mode are covered too. Mute remains available, and the saved slider level is preserved. Other browsers keep the slider.
 - Listening requires browser support for WebM/Opus, checked using `canPlayType('audio/webm; codecs=opus')`. Unsupported browsers see an update message instead of station controls. Older iPhones, iPads, and Macs may need a system software update. No MP3 fallback is attempted.
 - Keyboard users can Tab to the station, activate it with Enter or Space, and use the player controls. The volume slider supports arrow keys. The station chooser's overflow scrollbar supports keyboard and pointer input.
 

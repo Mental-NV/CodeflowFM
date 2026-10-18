@@ -9,19 +9,14 @@ export function supportsWebmOpus(audio) {
   return support === 'probably' || support === 'maybe';
 }
 
-// iOS can ignore media volume assignments. Probe before playback instead of
-// relying on browser names (including Firefox on iOS and iPad desktop mode).
-export function supportsVolumeControl(audio) {
-  const original = audio.volume;
-  const probe = original === 0.5 ? 0.25 : 0.5;
-  try {
-    audio.volume = probe;
-    return audio.volume === probe;
-  } catch {
-    return false;
-  } finally {
-    try { audio.volume = original; } catch { /* Some browsers expose read-only volume. */ }
-  }
+export function hideVolumeControl({ userAgent = '', platform = '', maxTouchPoints = 0 } = {}) {
+  // Firefox on iOS can identify as Safari; iPad desktop mode can identify as a Mac.
+  const ios = /iPhone|iPad|iPod/i.test(userAgent)
+    || (platform === 'MacIntel' && maxTouchPoints > 1);
+  const iosChromeOrFirefox = /CriOS|FxiOS/i.test(userAgent);
+  const mobileChromeOrFirefox = /Android|Mobile/i.test(userAgent)
+    && /Chrome\/|Firefox\//i.test(userAgent);
+  return ios || iosChromeOrFirefox || mobileChromeOrFirefox;
 }
 
 export function readPreferences(storage) {

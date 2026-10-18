@@ -1,4 +1,4 @@
-import { RadioPlayer, prepareStation, readPreferences, savePreferences, supportsVolumeControl } from './radio.js';
+import { RadioPlayer, prepareStation, readPreferences, savePreferences, hideVolumeControl } from './radio.js';
 import { installScrollbar } from './scrollbar.js';
 
 const element = id => document.getElementById(id);
@@ -6,7 +6,7 @@ const audio = element('radio-audio');
 let storage;
 try { storage = window.localStorage; } catch { /* Storage can be blocked by browser settings. */ }
 const preferences = readPreferences(storage);
-const adjustableVolume = supportsVolumeControl(audio);
+const adjustableVolume = !hideVolumeControl(navigator);
 if (adjustableVolume) audio.volume = preferences.volume;
 audio.muted = preferences.muted;
 const cards = new Map();

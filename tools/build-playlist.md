@@ -1,6 +1,6 @@
-# Build an MP3 playlist
+# Build an audio playlist
 
-`build-playlist.mjs` renames or copies local MP3 files to URL-safe filenames and generates a playlist, its JSON Schema, and a file mapping. Use Node.js 22+ for this project (the script itself supports Node.js 18+). No npm packages are required. Optionally install `music-metadata` in the project with `npm install music-metadata` to read artist and title tags; missing packages or unreadable tags fall back to the original filename.
+`build-playlist.mjs` renames or copies local MP3 and WebM/Opus files to URL-safe filenames and generates a playlist, its JSON Schema, and a file mapping. Use Node.js 22+ for this project (the script itself supports Node.js 18+). No npm packages are required. Optionally install `music-metadata` in the project with `npm install music-metadata` to read artist and title tags; missing packages or unreadable tags fall back to the original filename.
 
 Run commands from the CodeFlowFM project directory. Start by previewing filenames in a separate output directory:
 
@@ -24,10 +24,10 @@ Use separate arguments (`--dir "path"`), rather than `--dir=path`. Paths resolve
 
 | Option | Default | Behavior |
 | --- | --- | --- |
-| `--dir <path>` | Required | Input directory containing MP3 files; extension matching is case insensitive. |
+| `--dir <path>` | Required | Input directory containing MP3 or WebM/Opus files; extension matching is case insensitive. |
 | `--out <path>` | Input directory | Destination for audio and JSON files. In copy mode, if this equals the input directory, outputs go into its `_renamed` subfolder. |
 | `--mode <rename\|copy>` | `rename` | Rename/move originals, or copy them while retaining originals. |
-| `--recursive` | Off | Include MP3 files in subdirectories; output is flattened into one directory. |
+| `--recursive` | Off | Include MP3 and WebM files in subdirectories; output is flattened into one directory. |
 | `--dryRun` | Off | Preview audio renames without applying them; still write JSON artifacts. |
 | `--baseUrl <url>` | Omitted | Public audio URL prefix; trailing slashes are removed. Without it, track URLs use `./<filename>`. |
 | `--stationId <id>` | `future-garage` | Playlist station ID and the source of the filename prefix. |
@@ -43,12 +43,14 @@ The effective output directory contains:
 - `playlist.schema.json`: JSON Schema 2020-12 describing the generated playlist format.
 - `rename-map.json`: absolute source and destination paths, original and generated filenames, full SHA-256 hashes, and byte sizes.
 
-Files are sorted by their full paths before assigning a four-digit sequence number. Names normally follow `<station-slug>-<sequence>-<track-slug>.mp3`. Slugs use lowercase ASCII letters, digits, and hyphens; non-Latin characters are removed, and an empty track slug becomes `track`. The track slug uses `artist - title` when both tags are available, otherwise the original filename stem, and is capped at 80 characters. Filenames depend on ordering and metadata; they are not content-hash names.
+Files are sorted by their full paths before assigning a four-digit sequence number. Names normally follow `<station-slug>-<sequence>-<track-slug>.<mp3|webm>`. Slugs use lowercase ASCII letters, digits, and hyphens; non-Latin characters are removed, and an empty track slug becomes `track`. The track slug uses `artist - title` when both tags are available, otherwise the original filename stem, and is capped at 80 characters. Filenames depend on ordering and metadata; they are not content-hash names.
 
-Each track contains a content-based ID (the first 16 SHA-256 characters), full hash, filename, encoded URL, byte size, MIME type `audio/mpeg`, original name, and nullable artist/title fields. `durationSec` is always `null`.
+Each track contains a content-based ID (the first 16 SHA-256 characters), full hash, filename, encoded URL, byte size, MIME type (`audio/mpeg` for MP3 or `audio/webm; codecs=opus` for WebM), original name, and nullable artist/title fields. `durationSec` is always `null`.
+
+WebM inputs must already contain Opus audio. The builder preserves their `.webm` extension and bytes; it does not transcode audio or verify its codec. The generated schema is copied from the app’s canonical `assets/playlist.schema.json`.
 
 ## Use with CodeFlowFM
 
-Before adding the generated playlist to `assets/`, fill in a positive `durationSec` for every track and ensure each track has a public HTTP(S) URL. The player needs durations for its repeating schedule. Upload the prepared MP3 files to the prefix passed as `--baseUrl`, then follow the [station setup instructions](../README.md#add-a-station). The script prepares files locally; it does not upload them or update the station catalog.
+Before adding the generated playlist to `assets/`, fill in a positive `durationSec` for every track and ensure each track has a public HTTP(S) URL. The player needs durations for its repeating schedule. Upload the prepared audio files to the prefix passed as `--baseUrl`, then follow the [station setup instructions](../README.md#add-a-station). The script prepares files locally; it does not upload them or update the station catalog.
 
-Exit code `0` indicates success, `2` indicates a missing `--dir` or invalid mode, and `1` indicates no MP3 files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.
+Exit code `0` indicates success, `2` indicates a missing `--dir` or invalid mode, and `1` indicates no MP3 or WebM files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.

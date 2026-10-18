@@ -23,8 +23,12 @@
           <h1>Pick a station.<br><span>Get into your work.</span></h1>
           <p class="intro-description">Continuous music for whatever needs your attention.</p>
         </div>
-        <div class="section-heading"><h2>Stations</h2></div>
-        <div class="chooser-frame">
+        <section id="browser-message" class="browser-message" role="status" aria-labelledby="browser-message-title" hidden>
+          <h2 id="browser-message-title">Your browser isn’t supported</h2>
+          <p>Update your browser to listen to Codeflow FM. On iPhone, iPad, or Mac, update your system software too.</p>
+        </section>
+        <div id="stations-heading" class="section-heading"><h2>Stations</h2></div>
+        <div id="chooser-frame" class="chooser-frame">
           <div id="station-chooser" class="station-chooser" aria-label="Available stations" tabindex="0">
             <div id="station-grid" class="station-grid"></div>
             <p id="catalog-message" class="catalog-message" role="status">Loading stations…</p>

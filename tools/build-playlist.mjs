@@ -1,7 +1,7 @@
 // build-playlist.mjs
 // Node.js 18+
-// Renames MP3 files to URL-safe names and computes SHA-256 track IDs,
-// generates playlist.json for a web MP3 player,
+// Renames MP3 and WebM/Opus files to URL-safe names and computes SHA-256 track IDs,
+// generates playlist.json for Codeflow FM,
 // and generates playlist.schema.json (JSON Schema) describing the playlist.
 //
 // Usage examples:
@@ -77,7 +77,7 @@ async function ensureDir(p) {
   await fs.mkdir(p, { recursive: true });
 }
 
-async function listMp3Files(dir, recursive = false) {
+async function listAudioFiles(dir, recursive = false) {
   const out = [];
   async function walk(current) {
     const entries = await fs.readdir(current, { withFileTypes: true });
@@ -87,7 +87,7 @@ async function listMp3Files(dir, recursive = false) {
         if (recursive) await walk(full);
         continue;
       }
-      if (e.isFile() && /\.mp3$/i.test(e.name)) out.push(full);
+      if (e.isFile() && /\.(mp3|webm)$/i.test(e.name)) out.push(full);
     }
   }
   await walk(dir);
@@ -139,52 +139,9 @@ async function safeRenameOrCopy({ from, to, mode }) {
   }
 }
 
-function buildPlaylistSchema() {
-  // JSON Schema 2020-12
-  return {
-    $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://example.com/playlist.schema.json",
-    title: "MP3 Playlist (Pre-MVP)",
-    type: "object",
-    additionalProperties: false,
-    required: ["schemaVersion", "station", "generatedAt", "tracks"],
-    properties: {
-      schemaVersion: { type: "string", const: "1.0" },
-      station: {
-        type: "object",
-        additionalProperties: false,
-        required: ["id", "name"],
-        properties: {
-          id: { type: "string", minLength: 1 },
-          name: { type: "string", minLength: 1 },
-        },
-      },
-      generatedAt: { type: "string", format: "date-time" },
-      baseUrl: { type: "string", minLength: 1 },
-      tracks: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["id", "filename", "url", "sizeBytes", "sha256", "mime"],
-          properties: {
-            id: { type: "string", minLength: 8 },
-            title: { type: ["string", "null"] },
-            artist: { type: ["string", "null"] },
-            filename: { type: "string", minLength: 1 },
-            url: { type: "string", minLength: 1 },
-            sizeBytes: { type: "integer", minimum: 0 },
-            sha256: { type: "string", minLength: 64, maxLength: 64 },
-            mime: { type: "string", const: "audio/mpeg" },
-            // Optional fields you may add later:
-            durationSec: { type: ["number", "null"], minimum: 0 },
-            originalName: { type: ["string", "null"] },
-          },
-        },
-      },
-    },
-  };
+async function buildPlaylistSchema() {
+  // Use the app's schema so generated playlists stay in sync with playback.
+  return JSON.parse(await fs.readFile(path.join(__dirname, "../assets/playlist.schema.json"), "utf-8"));
 }
 
 async function main() {
@@ -214,9 +171,9 @@ async function main() {
 
   await ensureDir(outDir);
 
-  const files = await listMp3Files(dir, recursive);
+  const files = await listAudioFiles(dir, recursive);
   if (!files.length) {
-    console.error(`No .mp3 files found in: ${dir}`);
+    console.error(`No .mp3 or .webm files found in: ${dir}`);
     process.exit(1);
   }
 
@@ -235,7 +192,7 @@ async function main() {
     const from = files[i];
     const stats = await fs.stat(from);
     const sha256 = await sha256File(from);
-    const hash8 = sha256.slice(0, 8);
+    const extension = path.extname(from).toLowerCase();
 
     const { title, artist } = await tryReadTags(from);
     const baseName = path.basename(from, path.extname(from));
@@ -246,12 +203,11 @@ async function main() {
     // keep filename length reasonable
     if (slug.length > 80) slug = slug.slice(0, 80).replace(/-+$/g, "");
 
-    // let newName = `${stationSlug}-${pad4(i + 1)}-${slug}-${hash8}.mp3`;
-    let newName = `${stationSlug}-${pad4(i + 1)}-${slug}.mp3`;
+    let newName = `${stationSlug}-${pad4(i + 1)}-${slug}${extension}`;
 
     // Ensure uniqueness even in pathological cases
     if (usedNames.has(newName)) {
-      newName = `${stationSlug}-${pad4(i + 1)}-${slug}-${sha256.slice(0, 12)}.mp3`;
+      newName = `${stationSlug}-${pad4(i + 1)}-${slug}-${sha256.slice(0, 12)}${extension}`;
     }
     usedNames.add(newName);
 
@@ -274,7 +230,7 @@ async function main() {
       url: baseUrl ? `${baseUrl}/${encodeURIComponent(newName)}` : `./${encodeURIComponent(newName)}`,
       sizeBytes: stats.size,
       sha256,
-      mime: "audio/mpeg",
+      mime: extension === ".webm" ? "audio/webm; codecs=opus" : "audio/mpeg",
       originalName: path.basename(from),
       durationSec: null, // optional: you can fill later if you add a duration parser
     });
@@ -302,7 +258,7 @@ async function main() {
     tracks,
   };
 
-  const schema = buildPlaylistSchema();
+  const schema = await buildPlaylistSchema();
 
   const playlistPath = path.join(effectiveOutDir, "playlist.json");
   const schemaPath = path.join(effectiveOutDir, "playlist.schema.json");
@@ -318,7 +274,7 @@ async function main() {
 
   // Helpful hint for R2 upload
   if (baseUrl) {
-    console.log("\nR2 note: upload the renamed .mp3 files + playlist.json to your bucket/prefix.");
+    console.log("\nR2 note: upload the prepared audio files + playlist.json to your bucket/prefix.");
     console.log("If you use a custom domain, baseUrl should be that public prefix (no trailing slash).");
   }
 }

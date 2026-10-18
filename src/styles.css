@@ -45,6 +45,9 @@ h2 { font-size: 14px; font-weight: 500; margin: 0; }
 .station-state::before { content: ""; height: 5px; width: 5px; border-radius: 50%; background: #717970; }
 .station-card[data-current="true"] .station-state::before { background: var(--accent); }
 .catalog-message { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.browser-message { margin-top: clamp(24px, 4vh, 42px); max-width: 560px; padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: #1e211f; overflow-y: auto; }
+.browser-message h2 { font-size: 18px; line-height: 1.4; }
+.browser-message p { margin: 12px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .chooser-scrollbar { position: absolute; top: 0; right: 0; bottom: 0; width: 10px; border-radius: 6px; background: #292e2a; touch-action: none; cursor: pointer; }
 .scrollbar-thumb { position: absolute; top: 0; left: 2px; right: 2px; min-height: 28px; border-radius: 6px; background: #828d80; }
 .player { z-index: 1; height: calc(112px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #41473f; background: #1c1f1c; padding: 22px clamp(24px, 5vw, 80px) calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr) auto; align-items: center; gap: 32px; }

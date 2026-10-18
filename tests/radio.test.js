@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { RadioPlayer, prepareStation, getLivePosition, readPreferences, savePreferences, STORAGE_KEY } from '../src/radio.js';
+import { RadioPlayer, prepareStation, getLivePosition, readPreferences, savePreferences, STORAGE_KEY, supportsWebmOpus, WEBM_OPUS_TYPE, UNSUPPORTED_BROWSER_MESSAGE } from '../src/radio.js';
 
 function station(id = 'test') {
   return prepareStation({ id, name: id }, {
     schemaVersion: '1.0', station: { id }, generatedAt: '2026-01-01T00:00:00Z',
-    tracks: [10, 20, 30].map((durationSec, index) => ({ url: `https://example.com/${id}/${index}.mp3`, durationSec })),
+    tracks: [10, 20, 30].map((durationSec, index) => ({ url: `https://example.com/${id}/${index}.webm`, mime: WEBM_OPUS_TYPE, durationSec })),
   });
 }
 
@@ -18,6 +18,8 @@ class AudioStub extends EventTarget {
   volume = 0.7;
   muted = false;
   playCount = 0;
+  support = 'probably';
+  canPlayType(type) { return type === WEBM_OPUS_TYPE ? this.support : ''; }
   error = null;
   readyState = 0;
   loadCount = 0;
@@ -44,6 +46,82 @@ function fixture(options = {}) {
   const player = new RadioPlayer(audio, { now: () => channel.epoch + 15000, createAudio: () => spare, ...options });
   return { audio, spare, channel, player };
 }
+
+test('WebM/Opus detection accepts maybe/probably and handles missing support', () => {
+  const audio = new AudioStub();
+  for (const support of ['probably', 'maybe', '', 'no']) {
+    audio.support = support;
+    assert.equal(supportsWebmOpus(audio), ['probably', 'maybe'].includes(support));
+  }
+  assert.equal(supportsWebmOpus({}), false);
+});
+
+test('unsupported browsers cannot start playback through cards, Play, or media actions', () => {
+  const audio = new AudioStub();
+  audio.support = '';
+  const spare = new AudioStub();
+  const player = new RadioPlayer(audio, { createAudio: () => spare });
+  const channel = station();
+  assert.equal(player.state, 'unsupported');
+  assert.equal(player.error, UNSUPPORTED_BROWSER_MESSAGE);
+  player.select(channel);
+  player.tune(channel);
+  player.toggle();
+  player.startTrack(0, 0);
+  player.pause();
+  player.fail();
+  assert.equal(player.state, 'unsupported');
+  assert.equal(player.wantsPlayback, false);
+  assert.equal(audio.playCount, 0);
+  assert.deepEqual(audio.sources, []);
+  assert.deepEqual(spare.sources, []);
+});
+
+test('a browser rejecting a supported source gets the unsupported message without fallback', async () => {
+  const { player, audio, spare, channel } = fixture();
+  audio.result = Promise.reject(Object.assign(new Error('Unsupported'), { name: 'NotSupportedError' }));
+  player.tune(channel);
+  await Promise.resolve();
+  assert.equal(player.state, 'unsupported');
+  assert.equal(player.error, UNSUPPORTED_BROWSER_MESSAGE);
+  assert.equal(audio.paused, true);
+  assert.equal(player.wantsPlayback, false);
+  assert.equal(player.pendingOffset, null);
+  assert.deepEqual(audio.sources, [channel.tracks[1].url]);
+  assert.deepEqual(spare.sources, []);
+  player.toggle();
+  assert.equal(audio.playCount, 1);
+});
+
+test('unsupported media events show the update message and ignore later playback rejections', async () => {
+  const { player, audio, channel } = fixture();
+  let reject;
+  audio.result = new Promise((resolve, rejectPromise) => { reject = rejectPromise; });
+  player.tune(channel);
+  audio.error = { code: 4 };
+  audio.event('error');
+  reject(Object.assign(new Error('Unsupported'), { name: 'NotSupportedError' }));
+  await Promise.resolve();
+  assert.equal(player.state, 'unsupported');
+  assert.equal(player.error, UNSUPPORTED_BROWSER_MESSAGE);
+  assert.equal(audio.paused, true);
+  assert.equal(player.wantsPlayback, false);
+});
+
+test('playlist preparation accepts WebM/Opus and MP3 but rejects unknown or missing MIME types', () => {
+  const playlist = {
+    schemaVersion: '1.0', station: { id: 'test' },
+    tracks: [{ url: 'https://example.com/music.webm', durationSec: 30, mime: WEBM_OPUS_TYPE }],
+  };
+  for (const mime of ['audio/mpeg', 'audio/webm', WEBM_OPUS_TYPE]) {
+    playlist.tracks[0].mime = mime;
+    assert.equal(prepareStation({ id: 'test', name: 'Test' }, playlist).tracks[0].mime, mime);
+  }
+  for (const mime of ['image/webp', 'audio/webm; codecs=vorbis', undefined]) {
+    playlist.tracks[0].mime = mime;
+    assert.throws(() => prepareStation({ id: 'test', name: 'Test' }, playlist), /MIME/);
+  }
+});
 
 test('live schedule finds the track and wraps endlessly, including before the epoch', () => {
   const channel = station();
@@ -380,12 +458,12 @@ test('invalid and empty playlists are rejected', () => {
   assert.throws(() => prepareStation({ id: 'a', name: 'A' }, playlist));
 });
 
-test('the shipped catalog contains 57 playable Future Garage tracks', async () => {
+test('the shipped catalog contains 54 playable Future Garage tracks', async () => {
   const catalog = JSON.parse(await readFile(new URL('../assets/stations.json', import.meta.url), 'utf8'));
   const playlist = JSON.parse(await readFile(new URL('../assets/future-garage.json', import.meta.url), 'utf8'));
   const channel = prepareStation(catalog.stations[0], playlist);
   assert.equal(channel.id, 'future-garage');
-  assert.equal(channel.tracks.length, 57);
-  assert.ok(channel.duration > 92 * 3600);
+  assert.equal(channel.tracks.length, 54);
+  assert.ok(channel.duration > 87 * 3600);
   assert.ok(channel.tracks.every(track => track.artist === 'X-Sound' && track.title));
 });

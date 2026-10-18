@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://example.com/playlist.schema.json",
-  "title": "MP3 Playlist (Pre-MVP)",
+  "title": "Codeflow FM Audio Playlist",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -91,7 +91,8 @@
           },
           "mime": {
             "type": "string",
-            "const": "audio/mpeg"
+            "enum": ["audio/mpeg", "audio/webm", "audio/webm; codecs=opus"],
+            "description": "WebM tracks must contain Opus audio. Each track has a single source; no format fallback is used."
           },
           "durationSec": {
             "type": [

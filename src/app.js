@@ -57,7 +57,7 @@ function formatTrackTime(seconds) {
 
 function renderProgress() {
   const audio = player.audio;
-  const track = player.station && !['ready', 'idle'].includes(player.state)
+  const track = player.station && !['ready', 'idle', 'unsupported'].includes(player.state)
     ? player.station.tracks[player.trackIndex] : null;
   // Use the playlist duration until metadata for the active source is available.
   const duration = track
@@ -78,10 +78,14 @@ function render() {
   const station = player.station;
   const muted = audio.muted || audio.volume === 0;
   const playing = player.state === 'playing';
+  const unsupported = player.state === 'unsupported';
+  element('browser-message').hidden = !unsupported;
+  element('stations-heading').hidden = unsupported;
+  element('chooser-frame').hidden = unsupported;
   const status = {
     idle: 'Choose a station to begin.', ready: 'Ready to play',
     loading: 'Loading…', playing: muted ? 'Playing · Muted' : 'Playing',
-    paused: 'Paused', error: player.error,
+    paused: 'Paused', error: player.error, unsupported: 'Browser not supported',
   }[player.state];
   element('player-station').textContent = station?.name ?? 'Nothing playing';
   element('player-station').title = station?.name ?? 'Nothing playing';
@@ -92,7 +96,7 @@ function render() {
   const artwork = element('player-art');
   artwork.hidden = !station;
   if (station && artwork.getAttribute('src') !== station.artwork) artwork.src = station.artwork;
-  element('play-toggle').disabled = !station;
+  element('play-toggle').disabled = !station || unsupported;
   const action = player.wantsPlayback ? 'Pause' : 'Play';
   element('play-toggle').setAttribute('aria-label', `${action}${station ? ` ${station.name}` : ''}`);
   element('play-toggle').title = action;
@@ -107,7 +111,7 @@ function render() {
   element('volume').value = String(Math.round(audio.volume * 100));
   element('volume-value').value = `${Math.round(audio.volume * 100)}%`;
 
-  const track = station && !['ready', 'idle'].includes(player.state) ? station.tracks[player.trackIndex] : null;
+  const track = station && !['ready', 'idle', 'unsupported'].includes(player.state) ? station.tracks[player.trackIndex] : null;
   const metadata = [track?.artist, track?.title].filter(Boolean).join(' - ');
   element('track-info').textContent = metadata || 'No track playing';
   element('track-info').title = metadata;
@@ -215,4 +219,4 @@ async function loadStations() {
 element('player-art').addEventListener('error', event => { event.target.src = './assets/future-garage.svg'; }, { once: true });
 installScrollbar(element('station-chooser'), element('station-grid'), element('chooser-scrollbar'));
 render();
-loadStations();
+if (player.state !== 'unsupported') loadStations();

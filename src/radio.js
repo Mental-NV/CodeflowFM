@@ -1,5 +1,13 @@
 export const STORAGE_KEY = 'codeflow-fm.preferences.v1';
 const defaults = { stationId: null, volume: 0.7, muted: false };
+export const WEBM_OPUS_TYPE = 'audio/webm; codecs=opus';
+export const AUDIO_TYPES = ['audio/mpeg', 'audio/webm', WEBM_OPUS_TYPE];
+export const UNSUPPORTED_BROWSER_MESSAGE = 'Your browser isn’t supported. Update your browser to listen. On iPhone, iPad, or Mac, update your system software too.';
+
+export function supportsWebmOpus(audio) {
+  const support = audio.canPlayType?.(WEBM_OPUS_TYPE);
+  return support === 'probably' || support === 'maybe';
+}
 
 export function readPreferences(storage) {
   try {
@@ -28,6 +36,7 @@ export function prepareStation(entry, playlist) {
     if (!['https:', 'http:'].includes(url.protocol) || !Number.isFinite(track.durationSec) || track.durationSec <= 0) {
       throw new Error('Invalid audio URL or duration');
     }
+    if (!AUDIO_TYPES.includes(track.mime)) throw new Error('Invalid audio MIME type');
     return { ...track, url: url.href };
   });
   const epoch = Date.parse(playlist.generatedAt);
@@ -60,8 +69,8 @@ export class RadioPlayer {
     this.timeoutMs = timeoutMs;
     this.station = null;
     this.trackIndex = 0;
-    this.state = 'idle';
-    this.error = '';
+    this.state = supportsWebmOpus(audio) ? 'idle' : 'unsupported';
+    this.error = this.state === 'unsupported' ? UNSUPPORTED_BROWSER_MESSAGE : '';
     this.wantsPlayback = false;
     this.request = 0;
     this.timer = null;
@@ -108,7 +117,9 @@ export class RadioPlayer {
       }
     });
     audio.addEventListener('error', () => {
-      if (audio === this.audio && this.wantsPlayback && audio.error) this.fail();
+      if (audio !== this.audio || !this.wantsPlayback || !audio.error) return;
+      if (audio.error.code === 4) this.unsupported();
+      else this.fail();
     });
     audio.addEventListener('volumechange', () => {
       if (audio === this.audio) this.emit();
@@ -118,12 +129,14 @@ export class RadioPlayer {
   emit() { this.onChange(this); }
 
   select(station) {
+    if (this.state === 'unsupported') return;
     this.station = station;
     this.state = 'ready';
     this.emit();
   }
 
   tune(station = this.station) {
+    if (this.state === 'unsupported') return;
     if (!station) return;
     if (this.station?.id === station.id && ['playing', 'loading'].includes(this.state)) return;
     this.station = station;
@@ -148,6 +161,7 @@ export class RadioPlayer {
   }
 
   startTrack(index, offset, usePrepared = false) {
+    if (this.state === 'unsupported') return;
     const request = ++this.request;
     const prepared = usePrepared && this.preparedTrack?.station === this.station
       && this.preparedTrack.index === index && !this.spareAudio.error;
@@ -179,10 +193,14 @@ export class RadioPlayer {
       const playback = this.audio.play();
       Promise.resolve(playback).catch(error => {
         if (request !== this.request || !this.wantsPlayback) return;
+        if (error?.name === 'NotSupportedError') { this.unsupported(); return; }
         this.fail(error?.name === 'NotAllowedError'
           ? 'Your browser paused playback. Press Play to listen.' : undefined);
       });
-    } catch { this.fail(); }
+    } catch (error) {
+      if (error?.name === 'NotSupportedError') this.unsupported();
+      else this.fail();
+    }
   }
 
   seekToOffset() {
@@ -204,6 +222,7 @@ export class RadioPlayer {
   }
 
   pause() {
+    if (this.state === 'unsupported') return;
     this.request++;
     this.wantsPlayback = false;
     this.awaitingPlayback = false;
@@ -220,12 +239,26 @@ export class RadioPlayer {
   }
 
   fail(message = `Could not play ${this.station?.name ?? 'this station'}. Press Play to try again.`) {
+    if (this.state === 'unsupported') return;
     this.request++;
     this.wantsPlayback = false;
     this.awaitingPlayback = false;
     clearTimeout(this.timer);
     this.state = 'error';
     this.error = message;
+    this.audio.pause();
+    this.clearPreload();
+    this.emit();
+  }
+
+  unsupported() {
+    this.request++;
+    this.wantsPlayback = false;
+    this.awaitingPlayback = false;
+    this.pendingOffset = null;
+    clearTimeout(this.timer);
+    this.state = 'unsupported';
+    this.error = UNSUPPORTED_BROWSER_MESSAGE;
     this.audio.pause();
     this.clearPreload();
     this.emit();

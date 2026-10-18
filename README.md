@@ -29,9 +29,11 @@ node scripts/serve.mjs --dist --port 4174
 
 ### Deploy to Cloudflare Pages
 
-GitHub Actions tests and builds pull requests, then deploys successful pushes to `master` to the `codeflowfm` Cloudflare Pages project. The target production URL is **https://codeflowfm.pages.dev/**.
+GitHub Actions runs all tests and builds each pull request targeting `master`, then deploys the tested build to the separate staging project at **https://test-codeflowfm.pages.dev/**. Opening, reopening, or updating a PR triggers this pipeline. PRs from forks and Dependabot run checks only. All PRs share staging, so it serves the last completed successful deployment.
 
-Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md) to register the project, create an API token, and add the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` GitHub repository secrets. The workflow also supports manual deployment from the Actions tab.
+Successful pushes or merges to `master` deploy production at **https://codeflowfm.pages.dev/**.
+
+Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md) to register production, create an API token, and add the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` GitHub repository secrets. The staging job creates its Cloudflare project automatically on the first eligible PR. The workflow also supports manual production deployment from the Actions tab.
 
 ## Listening behavior
 

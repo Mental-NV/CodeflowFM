@@ -5,21 +5,20 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Serialize production runs; only superseded PR checks may be cancelled.
-concurrency:
-  group: cloudflare-pages-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
-  build-and-deploy:
-    name: Test, build and deploy
+  build:
+    name: Test and build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: cloudflare-pages-checks-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Check out source
         uses: actions/checkout@v6
@@ -39,8 +38,95 @@ jobs:
       - name: Build static app
         run: npm run build
 
+      - name: Save tested build
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-app
+          path: dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  deploy-staging:
+    name: Deploy staging
+    needs: build
+    # Forks and Dependabot cannot access repository deployment secrets.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: staging
+      url: https://test-codeflowfm.pages.dev/
+    # Every PR shares one staging hostname; never overlap active uploads.
+    concurrency:
+      group: cloudflare-pages-staging
+      cancel-in-progress: false
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Download tested build
+        uses: actions/download-artifact@v4
+        with:
+          name: static-app
+          path: dist/
+
+      - name: Ensure separate staging project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/ensure-staging-project.mjs
+
+      - name: Deploy staging to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4'
+          # Match this project's production branch to update its root hostname.
+          command: pages deploy dist --project-name=test-codeflowfm --branch=staging --commit-hash=${{ github.sha }}
+
+      - name: Add staging links to run summary
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          printf '%s\n' 'Staging: https://test-codeflowfm.pages.dev/' "Deployment: $DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-production:
+    name: Deploy production
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: cloudflare-pages-production
+      cancel-in-progress: false
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Download tested build
+        uses: actions/download-artifact@v4
+        with:
+          name: static-app
+          path: dist/
+
       - name: Check deployment secrets
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -52,7 +138,6 @@ jobs:
 
       - name: Deploy production to Cloudflare Pages
         id: deploy
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

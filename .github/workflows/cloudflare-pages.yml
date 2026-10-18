@@ -31,7 +31,10 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      # The app and its tests have no package dependencies or lockfile.
+      - name: Install audio validation dependency
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      # The app and its tests have no npm dependencies or lockfile.
       - name: Test
         run: npm test
 

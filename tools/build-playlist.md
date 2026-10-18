@@ -1,6 +1,6 @@
 # Build an audio playlist
 
-`build-playlist.mjs` renames or copies local MP3 files to URL-safe filenames and generates a playlist, its JSON Schema, and a file mapping. Other file formats are ignored. Use Node.js 22+ for this project (the script itself supports Node.js 18+). No npm packages are required. Optionally install `music-metadata` in the project with `npm install music-metadata` to read artist and title tags; missing packages or unreadable tags fall back to the original filename.
+`build-playlist.mjs` renames or copies local MP3 files to URL-safe filenames and generates a playlist, its JSON Schema, and a file mapping. Files without an `.mp3` extension are ignored. Use Node.js 22+ for this project (the script itself supports Node.js 18+). Install FFmpeg and ensure its `ffprobe` command is on `PATH` (for example, `brew install ffmpeg` on macOS or `sudo apt-get install ffmpeg` on Debian/Ubuntu). No npm packages are required. Optionally install `music-metadata` in the project with `npm install music-metadata` to read artist and title tags; missing packages or unreadable tags fall back to the original filename.
 
 Run commands from the CodeFlowFM project directory. Start by previewing filenames in a separate output directory:
 
@@ -63,10 +63,12 @@ Files are sorted by their full paths before assigning a four-digit sequence numb
 
 Each track contains a content-based ID (the first 16 SHA-256 characters), full hash, filename, encoded URL, byte size, MIME type (`audio/mpeg`), original name, and nullable artist/title fields. `durationSec` is always `null`.
 
-Inputs must already be MP3 audio. The builder preserves their bytes and normalizes the extension to `.mp3`; it does not transcode audio or verify its codec. The generated schema is copied from the app’s canonical `assets/playlist.schema.json`.
+Inputs must already be MP3 audio. Before creating output directories, writing JSON, or renaming/copying audio, the builder checks every `.mp3` file with `ffprobe`. It requires an MP3 container with at least one audio stream and only MP3 audio codecs; embedded cover artwork is allowed. Mislabeled AAC/MP4, other codecs or containers, and files that cannot be probed stop the entire batch, including in `--dryRun` mode. Missing `ffprobe` also stops execution; there is no validation bypass. Probing checks the reported container and codecs, rather than decoding the entire file for corruption.
+
+The builder preserves audio bytes and normalizes the extension to `.mp3`; it does not transcode audio. The generated schema is copied from the app’s canonical `assets/playlist.schema.json`.
 
 ## Use with CodeFlowFM
 
 Before adding the generated playlist to `assets/`, fill in a positive `durationSec` for every track and ensure each track has a public HTTP(S) URL. The player needs durations for its repeating schedule. Upload the prepared audio files to the prefix passed as `--baseUrl`, then follow the [station setup instructions](../README.md#add-a-station). The script prepares files locally; it does not upload them or update the station catalog.
 
-Exit code `0` indicates success, `2` indicates invalid arguments or directory paths, and `1` indicates no MP3 files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.
+Exit code `0` indicates success, `2` indicates invalid arguments or directory paths, and `1` indicates no MP3 files, failed codec validation, missing `ffprobe`, or another processing error. Validation failures leave audio and existing output files untouched. Later operations are not transactional: an error during copying, renaming, or writing can leave partially processed audio. Keep original files or use copy mode when preparing a library.

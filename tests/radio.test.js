@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { RadioPlayer, prepareStation, getLivePosition, readPreferences, savePreferences, STORAGE_KEY, supportsWebmOpus, WEBM_OPUS_TYPE, UNSUPPORTED_BROWSER_MESSAGE } from '../src/radio.js';
+import { RadioPlayer, prepareStation, getLivePosition, readPreferences, savePreferences, STORAGE_KEY, supportsMp3, UNSUPPORTED_BROWSER_MESSAGE } from '../src/radio.js';
 
 function station(id = 'test') {
   return prepareStation({ id, name: id }, {
     schemaVersion: '1.0', station: { id }, generatedAt: '2026-01-01T00:00:00Z',
-    tracks: [10, 20, 30].map((durationSec, index) => ({ url: `https://example.com/${id}/${index}.webm`, mime: WEBM_OPUS_TYPE, durationSec })),
+    tracks: [10, 20, 30].map((durationSec, index) => ({ url: `https://example.com/${id}/${index}.mp3`, mime: 'audio/mpeg', durationSec })),
   });
 }
 
@@ -33,7 +33,7 @@ class AudioStub extends EventTarget {
   muted = false;
   playCount = 0;
   support = 'probably';
-  canPlayType(type) { return type === WEBM_OPUS_TYPE ? this.support : ''; }
+  canPlayType(type) { return type === 'audio/mpeg' ? this.support : ''; }
   error = null;
   readyState = 0;
   loadCount = 0;
@@ -68,13 +68,13 @@ function fixture(options = {}) {
   return { audio, spare, channel, player };
 }
 
-test('WebM/Opus detection accepts maybe/probably and handles missing support', () => {
+test('MP3 detection accepts maybe/probably and handles missing support', () => {
   const audio = new AudioStub();
   for (const support of ['probably', 'maybe', '', 'no']) {
     audio.support = support;
-    assert.equal(supportsWebmOpus(audio), ['probably', 'maybe'].includes(support));
+    assert.equal(supportsMp3(audio), ['probably', 'maybe'].includes(support));
   }
-  assert.equal(supportsWebmOpus({}), false);
+  assert.equal(supportsMp3({}), false);
 });
 
 test('unsupported browsers cannot start playback through cards, Play, or media actions', () => {
@@ -129,16 +129,13 @@ test('unsupported media events show the update message and ignore later playback
   assert.equal(player.wantsPlayback, false);
 });
 
-test('playlist preparation accepts WebM/Opus and MP3 but rejects unknown or missing MIME types', () => {
+test('playlist preparation accepts only MP3 and rejects other or missing MIME types', () => {
   const playlist = {
     schemaVersion: '1.0', station: { id: 'test' },
-    tracks: [{ url: 'https://example.com/music.webm', durationSec: 30, mime: WEBM_OPUS_TYPE }],
+    tracks: [{ url: 'https://example.com/music.mp3', durationSec: 30, mime: 'audio/mpeg' }],
   };
-  for (const mime of ['audio/mpeg', 'audio/webm', WEBM_OPUS_TYPE]) {
-    playlist.tracks[0].mime = mime;
-    assert.equal(prepareStation({ id: 'test', name: 'Test' }, playlist).tracks[0].mime, mime);
-  }
-  for (const mime of ['image/webp', 'audio/webm; codecs=vorbis', undefined]) {
+  assert.equal(prepareStation({ id: 'test', name: 'Test' }, playlist).tracks[0].mime, 'audio/mpeg');
+  for (const mime of ['audio/webm', 'audio/webm; codecs=opus', 'audio/opus', 'audio/ogg', 'image/webp', null, undefined]) {
     playlist.tracks[0].mime = mime;
     assert.throws(() => prepareStation({ id: 'test', name: 'Test' }, playlist), /MIME/);
   }

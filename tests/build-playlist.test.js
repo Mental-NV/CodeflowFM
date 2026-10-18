@@ -7,15 +7,17 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-test('playlist builder preserves WebM and MP3 files and emits the canonical schema', async () => {
+test('playlist builder copies only MP3 files and emits the MP3-only canonical schema', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-'));
   try {
     const input = join(directory, 'input');
     const output = join(directory, 'output');
     await mkdir(input);
     // Naming and copying do not transcode or inspect the encoded audio.
-    await writeFile(join(input, 'A.WEBM'), 'webm bytes');
+    await writeFile(join(input, 'A.MP3'), 'uppercase mp3 bytes');
     await writeFile(join(input, 'B.mp3'), 'mp3 bytes');
+    await writeFile(join(input, 'ignore.WEBM'), 'webm bytes');
+    await writeFile(join(input, 'ignore.opus'), 'opus bytes');
     await writeFile(join(input, 'ignore.webp'), 'image bytes');
     await promisify(execFile)(process.execPath, [
       fileURLToPath(new URL('../tools/build-playlist.mjs', import.meta.url)),
@@ -23,17 +25,68 @@ test('playlist builder preserves WebM and MP3 files and emits the canonical sche
     ]);
     const playlist = JSON.parse(await readFile(join(output, 'playlist.json'), 'utf8'));
     assert.equal(playlist.tracks.length, 2);
-    const [webm, mp3] = playlist.tracks;
-    assert.equal(webm.mime, 'audio/webm; codecs=opus');
-    assert.match(webm.filename, /\.webm$/);
-    assert.equal(webm.url, `https://example.com/audio/${webm.filename}`);
-    assert.equal(mp3.mime, 'audio/mpeg');
-    assert.match(mp3.filename, /\.mp3$/);
-    assert.equal(await readFile(join(output, webm.filename), 'utf8'), 'webm bytes');
-    assert.equal(await readFile(join(input, 'A.WEBM'), 'utf8'), 'webm bytes');
+    for (const mp3 of playlist.tracks) {
+      assert.equal(mp3.mime, 'audio/mpeg');
+      assert.match(mp3.filename, /\.mp3$/);
+      assert.equal(mp3.url, `https://example.com/audio/${mp3.filename}`);
+      assert.equal(await readFile(join(output, mp3.filename), 'utf8'), await readFile(join(input, mp3.originalName), 'utf8'));
+    }
+    assert.equal(await readFile(join(input, 'ignore.WEBM'), 'utf8'), 'webm bytes');
+    assert.equal(await readFile(join(input, 'ignore.opus'), 'utf8'), 'opus bytes');
+    assert.deepEqual((await readdir(output)).sort(), [...playlist.tracks.map(track => track.filename), 'playlist.json', 'playlist.schema.json', 'rename-map.json'].sort());
     const generatedSchema = JSON.parse(await readFile(join(output, 'playlist.schema.json'), 'utf8'));
     const schema = JSON.parse(await readFile(new URL('../assets/playlist.schema.json', import.meta.url), 'utf8'));
     assert.deepEqual(generatedSchema, schema);
+    assert.deepEqual(schema.properties.tracks.items.properties.mime.enum, ['audio/mpeg']);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('recursive playlist renaming leaves non-MP3 audio untouched', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-recursive-'));
+  try {
+    const input = join(directory, 'input');
+    const nested = join(input, 'nested');
+    const output = join(directory, 'output');
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(nested, 'A.MP3'), 'mp3 bytes');
+    await writeFile(join(nested, 'B.webm'), 'webm bytes');
+    await writeFile(join(nested, 'C.opus'), 'opus bytes');
+    await promisify(execFile)(process.execPath, [
+      fileURLToPath(new URL('../tools/build-playlist.mjs', import.meta.url)),
+      '--dir', input, '--out', output, '--recursive',
+    ]);
+    const playlist = JSON.parse(await readFile(join(output, 'playlist.json'), 'utf8'));
+    assert.equal(playlist.tracks.length, 1);
+    assert.equal(playlist.tracks[0].mime, 'audio/mpeg');
+    assert.equal(await readFile(join(output, playlist.tracks[0].filename), 'utf8'), 'mp3 bytes');
+    assert.deepEqual((await readdir(nested)).sort(), ['B.webm', 'C.opus']);
+    assert.equal(await readFile(join(nested, 'B.webm'), 'utf8'), 'webm bytes');
+    assert.equal(await readFile(join(nested, 'C.opus'), 'utf8'), 'opus bytes');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('playlist builder rejects folders without MP3s before writing outputs', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'codeflow-playlist-no-mp3-'));
+  try {
+    const input = join(directory, 'input');
+    const output = join(directory, 'output');
+    await mkdir(input);
+    await writeFile(join(input, 'A.webm'), 'webm bytes');
+    await writeFile(join(input, 'B.opus'), 'opus bytes');
+    await assert.rejects(promisify(execFile)(process.execPath, [
+      fileURLToPath(new URL('../tools/build-playlist.mjs', import.meta.url)),
+      '--dir', input, '--out', output,
+    ]), error => {
+      assert.equal(error.code, 1);
+      assert.match(error.stderr, /No \.mp3 files found/);
+      return true;
+    });
+    assert.deepEqual((await readdir(input)).sort(), ['A.webm', 'B.opus']);
+    await assert.rejects(readdir(output), { code: 'ENOENT' });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

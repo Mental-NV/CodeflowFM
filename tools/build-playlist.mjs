@@ -1,6 +1,6 @@
 // build-playlist.mjs
 // Node.js 18+
-// Renames MP3 and WebM/Opus files to URL-safe names and computes SHA-256 track IDs,
+// Renames MP3 files to URL-safe names and computes SHA-256 track IDs,
 // generates playlist.json for Codeflow FM,
 // and generates playlist.schema.json (JSON Schema) describing the playlist.
 //
@@ -151,7 +151,7 @@ async function listAudioFiles(dir, recursive = false) {
         if (recursive) await walk(full);
         continue;
       }
-      if (e.isFile() && /\.(mp3|webm)$/i.test(e.name)) out.push(full);
+      if (e.isFile() && /\.mp3$/i.test(e.name)) out.push(full);
     }
   }
   await walk(dir);
@@ -229,7 +229,7 @@ async function main() {
 
   const files = await listAudioFiles(dir, recursive);
   if (!files.length) {
-    console.error(`No .mp3 or .webm files found in: ${dir}`);
+    console.error(`No .mp3 files found in: ${dir}`);
     process.exit(1);
   }
 
@@ -250,7 +250,6 @@ async function main() {
     const from = files[i];
     const stats = await fs.stat(from);
     const sha256 = await sha256File(from);
-    const extension = path.extname(from).toLowerCase();
 
     const { title, artist } = await tryReadTags(from);
     const baseName = path.basename(from, path.extname(from));
@@ -261,11 +260,11 @@ async function main() {
     // keep filename length reasonable
     if (slug.length > 80) slug = slug.slice(0, 80).replace(/-+$/g, "");
 
-    let newName = `${stationSlug}-${pad4(i + 1)}-${slug}${extension}`;
+    let newName = `${stationSlug}-${pad4(i + 1)}-${slug}.mp3`;
 
     // Ensure uniqueness even in pathological cases
     if (usedNames.has(newName)) {
-      newName = `${stationSlug}-${pad4(i + 1)}-${slug}-${sha256.slice(0, 12)}${extension}`;
+      newName = `${stationSlug}-${pad4(i + 1)}-${slug}-${sha256.slice(0, 12)}.mp3`;
     }
     usedNames.add(newName);
 
@@ -288,7 +287,7 @@ async function main() {
       url: baseUrl ? `${baseUrl}/${encodeURIComponent(newName)}` : `./${encodeURIComponent(newName)}`,
       sizeBytes: stats.size,
       sha256,
-      mime: extension === ".webm" ? "audio/webm; codecs=opus" : "audio/mpeg",
+      mime: "audio/mpeg",
       originalName: path.basename(from),
       durationSec: null, // optional: you can fill later if you add a duration parser
     });

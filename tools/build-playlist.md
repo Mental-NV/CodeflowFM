@@ -4,6 +4,20 @@
 
 Run commands from the CodeFlowFM project directory. Start by previewing filenames in a separate output directory:
 
+On macOS (zsh or bash):
+
+```sh
+node tools/build-playlist.mjs --dir '~/Projects/Yt-Download/lofi-beats' --out './playlist-preview' --dryRun
+```
+
+Backslash-separated paths are also supported. Use single quotes to preserve the backslashes:
+
+```sh
+node tools/build-playlist.mjs --dir '~\Projects\Yt-Download\lofi-beats' --mode copy --out './prepared-audio'
+```
+
+On Windows (PowerShell):
+
 ```powershell
 node tools/build-playlist.mjs --dir "C:\Music\Future Garage" --out "./playlist-preview" --dryRun
 ```
@@ -20,7 +34,7 @@ The default mode is `rename`: it changes original filenames and moves the audio 
 
 ## Options
 
-Use separate arguments (`--dir "path"`), rather than `--dir=path`. Paths resolve relative to the current working directory.
+Use separate arguments (`--dir "path"`), rather than `--dir=path`. Both `--dir` and `--out` accept absolute paths, relative paths, and home paths beginning with `~`, `~/`, or `~\`. Relative paths resolve from the current working directory; `~` expands to the current user's home directory even inside quotes. On macOS and Linux, backslashes are treated as directory separators. Use single quotes around backslash paths in zsh or bash so the shell passes them unchanged. Other-user shortcuts such as `~alice` are not expanded by the script.
 
 | Option | Default | Behavior |
 | --- | --- | --- |
@@ -29,11 +43,13 @@ Use separate arguments (`--dir "path"`), rather than `--dir=path`. Paths resolve
 | `--mode <rename\|copy>` | `rename` | Rename/move originals, or copy them while retaining originals. |
 | `--recursive` | Off | Include MP3 and WebM files in subdirectories; output is flattened into one directory. |
 | `--dryRun` | Off | Preview audio renames without applying them; still write JSON artifacts. |
-| `--baseUrl <url>` | Omitted | Public audio URL prefix; trailing slashes are removed. Without it, track URLs use `./<filename>`. |
+| `--baseUrl <url>` | Omitted | Absolute HTTP(S) audio URL prefix without whitespace, query parameters, or a fragment; trailing slashes are removed. Without it, track URLs use `./<filename>`. |
 | `--stationId <id>` | `future-garage` | Playlist station ID and the source of the filename prefix. |
 | `--stationName <name>` | `Future Garage` | Playlist station display name. |
 
-Boolean flags also accept `true`, `1`, `yes`, `y`, or `on`; other supplied values are false. There is no dedicated `--help` mode.
+Boolean flags can be supplied alone to enable them, or with an explicit value. True values are `true`, `1`, `yes`, `y`, and `on`; false values are `false`, `0`, `no`, `n`, and `off` (case insensitive). Other boolean values are rejected. Mode values are also case insensitive. There is no dedicated `--help` mode.
+
+Unknown options, positional arguments, duplicate options, missing or blank values, invalid modes, and invalid URL prefixes stop execution with a descriptive error and exit code `2`. Validation runs before creating output directories, writing JSON, or renaming/copying audio. The input directory must already exist; an output directory can be created, but it and its existing parents must be directories. Use `./` before a relative path beginning with `-` so it is not mistaken for an option.
 
 ## Generated files
 
@@ -53,4 +69,4 @@ WebM inputs must already contain Opus audio. The builder preserves their `.webm`
 
 Before adding the generated playlist to `assets/`, fill in a positive `durationSec` for every track and ensure each track has a public HTTP(S) URL. The player needs durations for its repeating schedule. Upload the prepared audio files to the prefix passed as `--baseUrl`, then follow the [station setup instructions](../README.md#add-a-station). The script prepares files locally; it does not upload them or update the station catalog.
 
-Exit code `0` indicates success, `2` indicates a missing `--dir` or invalid mode, and `1` indicates no MP3 or WebM files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.
+Exit code `0` indicates success, `2` indicates invalid arguments or directory paths, and `1` indicates no MP3 or WebM files or another processing error. Operations are not transactional: an error can leave partially processed audio. Keep original files or use copy mode when preparing a library.

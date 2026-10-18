@@ -18,6 +18,7 @@
 import fs from "node:fs/promises";
 import fssync from "node:fs";
 import path from "node:path";
+import { homedir } from "node:os";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -27,27 +28,90 @@ const __dirname = path.dirname(__filename);
 const DEFAULT_STATION_ID = "future-garage";
 const DEFAULT_STATION_NAME = "Future Garage";
 
+class ArgumentError extends Error {}
+
+const STRING_OPTIONS = new Set(["dir", "out", "mode", "baseUrl", "stationId", "stationName"]);
+const BOOLEAN_OPTIONS = new Set(["recursive", "dryRun"]);
+const TRUE_VALUES = new Set(["1", "true", "yes", "y", "on"]);
+const FALSE_VALUES = new Set(["0", "false", "no", "n", "off"]);
+
 function parseArgs(argv) {
-  const args = {};
+  const args = Object.create(null);
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
-    if (!a.startsWith("--")) continue;
+    if (!a.startsWith("--")) {
+      throw new ArgumentError(`Unexpected argument: ${a}. Use named options such as --dir "path".`);
+    }
     const key = a.slice(2);
+    if (!STRING_OPTIONS.has(key) && !BOOLEAN_OPTIONS.has(key)) {
+      throw new ArgumentError(`Unknown option: ${a}. Supported options: ${[...STRING_OPTIONS, ...BOOLEAN_OPTIONS].map((name) => `--${name}`).join(", ")}. Use separate arguments (--dir "path"), not --dir=path.`);
+    }
+    if (Object.hasOwn(args, key)) {
+      throw new ArgumentError(`Duplicate option: ${a}. Supply each option only once.`);
+    }
     const next = argv[i + 1];
-    if (!next || next.startsWith("--")) {
+    if (next === undefined || next.startsWith("-")) {
+      if (STRING_OPTIONS.has(key)) throw new ArgumentError(`Missing value for ${a}.`);
       args[key] = true;
     } else {
-      args[key] = next;
+      if (!next.trim() || next.includes("\0")) throw new ArgumentError(`Invalid empty or null-containing value for ${a}.`);
+      if (BOOLEAN_OPTIONS.has(key)) {
+        const value = next.toLowerCase();
+        if (!TRUE_VALUES.has(value) && !FALSE_VALUES.has(value)) {
+          throw new ArgumentError(`Invalid value for ${a}: ${next}. Use true, false, 1, 0, yes, no, y, n, on, or off.`);
+        }
+        args[key] = TRUE_VALUES.has(value);
+      } else {
+        args[key] = next;
+      }
       i++;
+    }
+  }
+  if (!args.dir) throw new ArgumentError('Missing --dir. Example: node tools/build-playlist.mjs --dir "./Future Garage"');
+  if (args.mode !== undefined && !["rename", "copy"].includes(args.mode.toLowerCase())) {
+    throw new ArgumentError("Invalid --mode. Use: rename | copy.");
+  }
+  if (args.baseUrl !== undefined) {
+    let url;
+    try {
+      url = new URL(args.baseUrl);
+    } catch {
+      throw new ArgumentError("Invalid --baseUrl. Use an absolute HTTP(S) URL.");
+    }
+    if (!/^https?:\/\//i.test(args.baseUrl) || !url.hostname || /\s/.test(args.baseUrl) || args.baseUrl.includes("?") || args.baseUrl.includes("#")) {
+      throw new ArgumentError("Invalid --baseUrl. Use an absolute HTTP(S) URL without whitespace, a query, or a fragment.");
     }
   }
   return args;
 }
 
-function toBool(v) {
-  if (v === true) return true;
-  if (typeof v !== "string") return false;
-  return ["1", "true", "yes", "y", "on"].includes(v.toLowerCase());
+async function validateDirectory(directory, option, allowMissing = false) {
+  let current = directory;
+  while (true) {
+    let stats;
+    try {
+      stats = await fs.stat(current);
+    } catch (err) {
+      if (err.code === "ENOENT" && allowMissing) {
+        current = path.dirname(current);
+        continue;
+      }
+      if (err.code === "ENOENT" || err.code === "ENOTDIR") {
+        throw new ArgumentError(`Invalid --${option}: ${directory}. ${allowMissing ? "Output path must be a directory with directory parents." : "Input directory must exist."}`);
+      }
+      throw err;
+    }
+    if (!stats.isDirectory()) throw new ArgumentError(`Invalid --${option}: ${directory}. Path must be a directory.`);
+    return;
+  }
+}
+
+function resolveDirectory(input) {
+  // Quoted tildes are not expanded by the shell. Accept either separator so
+  // home paths with backslashes also work on macOS and Linux.
+  const expanded = input.replace(/^~(?=$|[\\/])/, () => homedir());
+  const normalized = process.platform === "win32" ? expanded : expanded.replace(/\\/g, "/");
+  return path.resolve(normalized);
 }
 
 function normalizeAscii(input) {
@@ -147,20 +211,11 @@ async function buildPlaylistSchema() {
 async function main() {
   const args = parseArgs(process.argv);
 
-  const dir = args.dir ? path.resolve(args.dir) : null;
-  if (!dir) {
-    console.error("Missing --dir. Example: node tools/build-playlist.mjs --dir \"./Future Garage\"");
-    process.exit(2);
-  }
-
-  const outDir = args.out ? path.resolve(args.out) : dir;
-  const recursive = toBool(args.recursive);
-  const dryRun = toBool(args.dryRun);
+  const dir = resolveDirectory(args.dir);
+  const outDir = args.out ? resolveDirectory(args.out) : dir;
+  const recursive = args.recursive ?? false;
+  const dryRun = args.dryRun ?? false;
   const mode = (args.mode || "rename").toLowerCase(); // rename | copy
-  if (!["rename", "copy"].includes(mode)) {
-    console.error("Invalid --mode. Use: rename | copy");
-    process.exit(2);
-  }
 
   const stationId = args.stationId ? String(args.stationId) : DEFAULT_STATION_ID;
   const stationName = args.stationName ? String(args.stationName) : DEFAULT_STATION_NAME;
@@ -169,13 +224,16 @@ async function main() {
   const baseUrlRaw = args.baseUrl ? String(args.baseUrl) : "";
   const baseUrl = baseUrlRaw ? baseUrlRaw.replace(/\/+$/g, "") : ""; // trim trailing /
 
-  await ensureDir(outDir);
+  await validateDirectory(dir, "dir");
+  await validateDirectory(outDir, "out", true);
 
   const files = await listAudioFiles(dir, recursive);
   if (!files.length) {
     console.error(`No .mp3 or .webm files found in: ${dir}`);
     process.exit(1);
   }
+
+  await ensureDir(outDir);
 
   const mapping = [];
   const tracks = [];
@@ -280,6 +338,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
-  process.exit(1);
+  console.error(err instanceof ArgumentError ? `Error: ${err.message}` : err);
+  process.exitCode = err instanceof ArgumentError ? 2 : 1;
 });

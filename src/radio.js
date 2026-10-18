@@ -1,5 +1,7 @@
 export const STORAGE_KEY = 'codeflow-fm.preferences.v1';
 const defaults = { stationId: null, volume: 0.7, muted: false };
+const SEEK_RETRY_MS = 500;
+const MAX_SEEK_ATTEMPTS = 20;
 export const WEBM_OPUS_TYPE = 'audio/webm; codecs=opus';
 export const AUDIO_TYPES = ['audio/mpeg', 'audio/webm', WEBM_OPUS_TYPE];
 export const UNSUPPORTED_BROWSER_MESSAGE = 'Your browser isn’t supported. Update your browser to listen. On iPhone, iPad, or Mac, update your system software too.';
@@ -85,6 +87,12 @@ export class RadioPlayer {
     this.request = 0;
     this.timer = null;
     this.pendingOffset = null;
+    this.seekTimer = null;
+    this.seekAttempts = 0;
+    this.lastSeekAt = -Infinity;
+    this.seekPosition = null;
+    this.seekMetadataLoaded = false;
+    this.playbackStarted = false;
     this.awaitingPlayback = false;
 
     this.listen(audio);
@@ -92,29 +100,27 @@ export class RadioPlayer {
   }
 
   listen(audio) {
-    audio.addEventListener('loadedmetadata', () => {
-      if (audio !== this.audio) return;
-      this.seekToOffset();
-      this.onProgress(this);
-    });
-    for (const event of ['timeupdate', 'durationchange']) {
+    for (const event of ['loadedmetadata', 'loadeddata', 'canplay', 'progress', 'seeked', 'timeupdate', 'durationchange']) {
       audio.addEventListener(event, () => {
-        if (audio === this.audio) this.onProgress(this);
+        if (audio !== this.audio) return;
+        if (event === 'loadedmetadata') this.seekMetadataLoaded = true;
+        this.seekToOffset(event);
+        if (['loadedmetadata', 'timeupdate', 'durationchange'].includes(event)) this.onProgress(this);
       });
     }
     audio.addEventListener('playing', () => {
       if (audio !== this.audio || !this.wantsPlayback || audio.paused) return;
-      clearTimeout(this.timer);
-      this.awaitingPlayback = false;
-      this.state = 'playing';
-      this.error = '';
-      this.prepareNextTrack();
-      this.emit();
+      this.playbackStarted = true;
+      this.seekToOffset('playing');
+      if (this.pendingOffset === null) this.confirmPlayback();
     });
     audio.addEventListener('waiting', () => {
       if (audio !== this.audio || !this.wantsPlayback) return;
       this.state = 'loading';
-      this.startTimeout();
+      this.playbackStarted = false;
+      this.seekPosition = null;
+      // Repeated buffering events must not extend the initial seek deadline.
+      if (this.pendingOffset === null) this.startTimeout();
       this.emit();
     });
     audio.addEventListener('pause', () => {
@@ -123,6 +129,7 @@ export class RadioPlayer {
     });
     audio.addEventListener('ended', () => {
       if (audio === this.audio && this.wantsPlayback && this.station) {
+        if (this.pendingOffset !== null) { this.fail(); return; }
         this.startTrack((this.trackIndex + 1) % this.station.tracks.length, 0, true);
       }
     });
@@ -137,6 +144,24 @@ export class RadioPlayer {
   }
 
   emit() { this.onChange(this); }
+
+  confirmPlayback() {
+    if (!this.wantsPlayback || !this.playbackStarted || this.audio.paused) return;
+    clearTimeout(this.timer);
+    this.awaitingPlayback = false;
+    this.state = 'playing';
+    this.error = '';
+    this.prepareNextTrack();
+    this.emit();
+  }
+
+  clearSeek() {
+    clearTimeout(this.seekTimer);
+    this.seekTimer = null;
+    this.pendingOffset = null;
+    this.seekPosition = null;
+    this.seekMetadataLoaded = false;
+  }
 
   select(station) {
     if (this.state === 'unsupported') return;
@@ -176,6 +201,10 @@ export class RadioPlayer {
     const prepared = usePrepared && this.preparedTrack?.station === this.station
       && this.preparedTrack.index === index && !this.spareAudio.error;
     clearTimeout(this.timer);
+    this.clearSeek();
+    this.playbackStarted = false;
+    this.seekAttempts = 0;
+    this.lastSeekAt = -Infinity;
     this.wantsPlayback = false;
     this.state = 'loading';
     this.audio.pause();
@@ -190,16 +219,21 @@ export class RadioPlayer {
     this.clearPreload();
     this.trackIndex = index;
     this.error = '';
-    this.pendingOffset = prepared ? null : offset;
+    this.pendingOffset = !prepared && offset > 0 ? offset : null;
     if (!prepared) this.audio.src = this.station.tracks[index].url;
     this.state = prepared && this.audio.readyState >= 3 ? 'playing' : 'loading';
     this.awaitingPlayback = true;
     this.wantsPlayback = true;
     this.emit();
     this.startTimeout();
+    this.seekToOffset();
     // play() stays in the station click's call stack for browser gesture policies.
     try {
-      if (!prepared) this.audio.currentTime = offset;
+      // Some mobile engines reject early seeks. That must not prevent play()
+      // from running in the user's gesture; readiness events will retry it.
+      if (!prepared) {
+        try { this.audio.currentTime = offset; } catch { /* Retry once seekable. */ }
+      }
       const playback = this.audio.play();
       Promise.resolve(playback).catch(error => {
         if (request !== this.request || !this.wantsPlayback) return;
@@ -213,12 +247,49 @@ export class RadioPlayer {
     }
   }
 
-  seekToOffset() {
+  seekToOffset(event) {
     if (this.pendingOffset === null || !this.wantsPlayback) return;
+    if (this.seekTimer === null) {
+      this.seekTimer = setTimeout(() => {
+        this.seekTimer = null;
+        this.seekToOffset('retry');
+      }, SEEK_RETRY_MS);
+      this.seekTimer.unref?.();
+    }
+    // src changes can leave the previous resource's metadata visible until the
+    // load algorithm runs. Do not clamp or seek using that stale duration.
+    if (!this.seekMetadataLoaded) return;
     const duration = this.audio.duration;
-    const offset = Number.isFinite(duration) ? Math.min(this.pendingOffset, Math.max(0, duration - 0.05)) : this.pendingOffset;
-    this.pendingOffset = null;
-    try { this.audio.currentTime = offset; } catch { this.fail(); }
+    const offset = Number.isFinite(duration) && duration > 0
+      ? Math.min(this.pendingOffset, Math.max(0, duration - 0.05)) : this.pendingOffset;
+    this.pendingOffset = offset;
+    if (this.audio.readyState < 2 || this.audio.seeking) {
+      this.seekPosition = null;
+      return;
+    }
+    const position = this.audio.currentTime;
+    // A currentTime assignment can report the target before the decoder gets
+    // there. Require subsequent playback movement, not just setter readback.
+    const nearTarget = Math.abs(position - offset) <= Math.min(1, offset / 2);
+    if (nearTarget) {
+      if (this.playbackStarted && !this.audio.paused) {
+        if (event === 'timeupdate' && this.seekPosition !== null && position > this.seekPosition) {
+          this.clearSeek();
+          this.confirmPlayback();
+          return;
+        } else if (['playing', 'seeked', 'timeupdate'].includes(event)) {
+          this.seekPosition ??= position;
+        }
+      }
+    } else this.seekPosition = null;
+    const ranges = this.audio.seekable;
+    const canSeek = ranges && Array.from({ length: ranges.length }, (_, i) => i)
+      .some(i => ranges.start(i) <= offset && offset <= ranges.end(i));
+    if (!canSeek || this.seekAttempts >= MAX_SEEK_ATTEMPTS || Date.now() - this.lastSeekAt < SEEK_RETRY_MS) return;
+    this.seekAttempts++;
+    this.lastSeekAt = Date.now();
+    this.seekPosition = null;
+    try { this.audio.currentTime = offset; } catch { /* Retry within the startup deadline. */ }
   }
 
   startTimeout() {
@@ -236,6 +307,8 @@ export class RadioPlayer {
     this.request++;
     this.wantsPlayback = false;
     this.awaitingPlayback = false;
+    this.playbackStarted = false;
+    this.clearSeek();
     clearTimeout(this.timer);
     this.state = this.station ? 'paused' : 'idle';
     this.audio.pause();
@@ -253,6 +326,8 @@ export class RadioPlayer {
     this.request++;
     this.wantsPlayback = false;
     this.awaitingPlayback = false;
+    this.playbackStarted = false;
+    this.clearSeek();
     clearTimeout(this.timer);
     this.state = 'error';
     this.error = message;
@@ -265,7 +340,8 @@ export class RadioPlayer {
     this.request++;
     this.wantsPlayback = false;
     this.awaitingPlayback = false;
-    this.pendingOffset = null;
+    this.playbackStarted = false;
+    this.clearSeek();
     clearTimeout(this.timer);
     this.state = 'unsupported';
     this.error = UNSUPPORTED_BROWSER_MESSAGE;

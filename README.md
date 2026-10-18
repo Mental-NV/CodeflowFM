@@ -36,6 +36,7 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 ## Listening behavior
 
 - Clicking a station starts playback from the current point in its repeating schedule. The playlist's `generatedAt` timestamp anchors that schedule, and `durationSec` locates the track and offset. Listeners with accurate clocks tune into approximately the same point.
+- Joining mid-track stays in Loading until playback advances near the requested offset. Ignored or rejected seeks retry when the target becomes seekable, at most once every 500 ms for up to 20 attempts within the 25-second startup deadline. A seek that never completes shows a recoverable error.
 - Tracks advance automatically and the playlist loops endlessly. Pausing stops audio; Play rejoins the station's current scheduled position. Clicking an already playing station does not restart it.
 - While a track plays, a second audio element preloads the next track. At the end, playback switches directly to that prepared element without fading or overlapping tracks. Loading is still possible if the connection or browser has not buffered enough audio.
 - Local storage remembers the selected station, volume, and mute setting. Refreshing never starts audio automatically. Listening still works if storage is unavailable.

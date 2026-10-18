@@ -2,12 +2,11 @@ export const STORAGE_KEY = 'codeflow-fm.preferences.v1';
 const defaults = { stationId: null, volume: 0.7, muted: false };
 const SEEK_RETRY_MS = 500;
 const MAX_SEEK_ATTEMPTS = 20;
-export const WEBM_OPUS_TYPE = 'audio/webm; codecs=opus';
-export const AUDIO_TYPES = ['audio/mpeg', 'audio/webm', WEBM_OPUS_TYPE];
-export const UNSUPPORTED_BROWSER_MESSAGE = 'Your browser isn’t supported. Update your browser to listen. On iPhone, iPad, or Mac, update your system software too.';
+export const MP3_TYPE = 'audio/mpeg';
+export const UNSUPPORTED_BROWSER_MESSAGE = 'Your browser can’t play MP3 audio. Update your browser to listen.';
 
-export function supportsWebmOpus(audio) {
-  const support = audio.canPlayType?.(WEBM_OPUS_TYPE);
+export function supportsMp3(audio) {
+  const support = audio.canPlayType?.(MP3_TYPE);
   return support === 'probably' || support === 'maybe';
 }
 
@@ -48,7 +47,7 @@ export function prepareStation(entry, playlist) {
     if (!['https:', 'http:'].includes(url.protocol) || !Number.isFinite(track.durationSec) || track.durationSec <= 0) {
       throw new Error('Invalid audio URL or duration');
     }
-    if (!AUDIO_TYPES.includes(track.mime)) throw new Error('Invalid audio MIME type');
+    if (track.mime !== MP3_TYPE) throw new Error('Invalid audio MIME type: only MP3 (audio/mpeg) is supported');
     return { ...track, url: url.href };
   });
   const epoch = Date.parse(playlist.generatedAt);
@@ -81,7 +80,7 @@ export class RadioPlayer {
     this.timeoutMs = timeoutMs;
     this.station = null;
     this.trackIndex = 0;
-    this.state = supportsWebmOpus(audio) ? 'idle' : 'unsupported';
+    this.state = supportsMp3(audio) ? 'idle' : 'unsupported';
     this.error = this.state === 'unsupported' ? UNSUPPORTED_BROWSER_MESSAGE : '';
     this.wantsPlayback = false;
     this.request = 0;

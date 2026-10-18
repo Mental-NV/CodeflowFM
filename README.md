@@ -45,22 +45,22 @@ Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md
 - The player shows loading, playing, paused, muted, and recoverable error states. After a playback/network error, click Play or the station card to retry. A stalled connection times out after 25 seconds.
 - The browser streams audio directly from the playlist URLs. A fast first start depends on the connection and audio host. Tracks are not downloaded or cached for offline use. Mobile browsers and operating systems may suspend background playback.
 - The player hides the volume control on iOS and in mobile Chrome and Firefox using browser/device identifiers. All iOS browsers are covered because Firefox can identify as Safari; iPads in desktop mode are covered too. Mute remains available, and the saved slider level is preserved. Other browsers keep the slider.
-- Listening requires browser support for WebM/Opus, checked using `canPlayType('audio/webm; codecs=opus')`. Unsupported browsers see an update message instead of station controls. Older iPhones, iPads, and Macs may need a system software update. No MP3 fallback is attempted.
+- Listening supports MP3 audio only, checked using `canPlayType('audio/mpeg')`. Browsers without MP3 support see an update message instead of station controls.
 - Keyboard users can Tab to the station, activate it with Enter or Space, and use the player controls. The volume slider supports arrow keys. The station chooser's overflow scrollbar supports keyboard and pointer input.
 
 ## Add a station
 
-1. Add a playlist JSON file under `assets/`, following `assets/playlist.schema.json`. Every track needs a public HTTP(S) `url`, a positive `durationSec` for scheduling, and `mime`: use `audio/webm; codecs=opus` (or `audio/webm`) for WebM containing Opus audio. Existing MP3 tracks use `audio/mpeg`. Each track has one URL, with no alternate-format fallback.
+1. Add a playlist JSON file under `assets/`, following `assets/playlist.schema.json`. Every track must be MP3 audio with a public HTTP(S) `url`, a positive `durationSec` for scheduling, and `mime` set to `audio/mpeg`. Each track has one URL.
 2. Add an entry to `assets/stations.json` with `id`, `name`, `description`, `artwork`, and `playlist`. Paths are relative to the app root, for example `./assets/another-playlist.json`.
 3. Match the catalog entry's `id` to the playlist's `station.id`, and run the build again.
 
 The chooser scales to multiple stations without changing the player. The catalog includes Future Garage and Lo-Fi Beats.
 
-Serve WebM files with the HTTP `Content-Type: audio/webm` header and byte-range support so the browser can seek into long tracks. Changing a playlist's MIME type does not convert audio: upload actual Opus-encoded WebM files and update the filenames, URLs, hashes, sizes, and durations. The included Future Garage playlist still points to its existing MP3 library.
+Serve MP3 files with the HTTP `Content-Type: audio/mpeg` header and byte-range support so the browser can seek into long tracks. When replacing audio, update the playlist's filenames, URLs, hashes, sizes, and durations to match the uploaded files.
 
 ## Audio maintenance tools
 
-Use the [playlist builder](tools/build-playlist.md) to prepare MP3 or WebM/Opus filenames and generate playlist JSON files for a station.
+Use the [playlist builder](tools/build-playlist.md) to prepare MP3 filenames and generate playlist JSON files for a station.
 
 Use the [absolute-silence cleaner](tools/clean-mp3-silence.md) to scan MP3 folders, preview detected gaps with `--dryrun`, and create cleaned copies beside untouched originals. Both modes produce JSON reports.
 

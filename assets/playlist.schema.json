@@ -91,8 +91,8 @@
           },
           "mime": {
             "type": "string",
-            "enum": ["audio/mpeg", "audio/webm", "audio/webm; codecs=opus"],
-            "description": "WebM tracks must contain Opus audio. Each track has a single source; no format fallback is used."
+            "enum": ["audio/mpeg"],
+            "description": "Only MP3 audio is supported. Each track has a single source."
           },
           "durationSec": {
             "type": [

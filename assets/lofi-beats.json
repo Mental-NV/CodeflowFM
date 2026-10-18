@@ -80,18 +80,6 @@
       "durationSec": 11474.021
     },
     {
-      "id": "8c6e4c126fb25b4e",
-      "title": "Best of lofi 3",
-      "artist": "Lo-Fi Girl",
-      "filename": "lofi-beats-0007-best-of-lofi-3.webm",
-      "url": "https://pub-d63aad6e423f4857b02dc461fe4053b8.r2.dev/lofi-beats/lofi-beats-0007-best-of-lofi-3.webm",
-      "sizeBytes": 398884282,
-      "sha256": "8c6e4c126fb25b4e30bb7113c1951995bc6d9bd5e0df25a680c253406e80d831",
-      "mime": "audio/webm; codecs=opus",
-      "originalName": "Best-of-lofi 3.webm",
-      "durationSec": 22257.861
-    },
-    {
       "id": "12928987ec767f50",
       "title": "Best of lofi 4",
       "artist": "Lo-Fi Girl",
@@ -114,18 +102,6 @@
       "mime": "audio/webm; codecs=opus",
       "originalName": "Best-of-lofi.webm",
       "durationSec": 8229.441
-    },
-    {
-      "id": "e3354b0443cb9f55",
-      "title": "chill music for work 💼 lofi beats to stay productive",
-      "artist": "Lo-Fi Girl",
-      "filename": "lofi-beats-0010-chill-music-for-work-lofi-beats-to-stay-productive.webm",
-      "url": "https://pub-d63aad6e423f4857b02dc461fe4053b8.r2.dev/lofi-beats/lofi-beats-0010-chill-music-for-work-lofi-beats-to-stay-productive.webm",
-      "sizeBytes": 633701876,
-      "sha256": "e3354b0443cb9f5507eccdc00ba053c657a851f79c941b35ec1af79da4b5f3a4",
-      "mime": "audio/webm; codecs=opus",
-      "originalName": "chill music for work 💼 lofi beats to stay productive.webm",
-      "durationSec": 36000.021
     },
     {
       "id": "c062b267f6a10a36",

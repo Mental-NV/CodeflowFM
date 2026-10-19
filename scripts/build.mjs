@@ -14,7 +14,7 @@ for (const entry of catalog.stations) {
   prepareStation(entry, playlist);
 }
 await mkdir(join(root, 'dist'), { recursive: true });
-for (const item of ['index.html', 'src', 'assets']) {
+for (const item of ['index.html', 'web.config', 'src', 'assets']) {
   await cp(join(root, item), join(root, 'dist', item), { recursive: true });
 }
 // A static host serves these files directly; no Node process runs in production.

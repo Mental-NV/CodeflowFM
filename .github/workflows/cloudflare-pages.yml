@@ -209,7 +209,13 @@ jobs:
           az webapp config appsettings set \
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name "$AZURE_WEBAPP_NAME" \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=1 \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+            --output none
+          # OneDeploy extracts into wwwroot; a ZIP mount would hide those files.
+          az webapp config appsettings delete \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --setting-names WEBSITE_RUN_FROM_PACKAGE \
             --output none
 
       - name: Deploy static files to Azure App Service
@@ -219,6 +225,34 @@ jobs:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
           package: dist/
+
+      - name: Verify Azure serves the tested static files
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.webapp-url }}
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            ready=true
+            for file in index.html assets/stations.json src/app.js src/styles.css; do
+              path="$file"
+              if [[ "$file" == index.html ]]; then path=''; fi
+              if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+                --output "$RUNNER_TEMP/azure-response" "${DEPLOYMENT_URL%/}/$path" || \
+                ! cmp --silent "dist/$file" "$RUNNER_TEMP/azure-response"; then
+                echo "Azure has not served the tested $file yet."
+                ready=false
+                break
+              fi
+            done
+            if [[ "$ready" == true ]]; then
+              echo 'Azure serves the tested HTML, catalog, JavaScript, and CSS.'
+              exit 0
+            fi
+            echo "Azure site not ready (attempt $attempt/12)."
+            if (( attempt < 12 )); then sleep 10; fi
+          done
+          echo '::error::Azure did not serve the tested static files after deployment. Check App Service diagnostics and docs/05-azure-app-service-deployment.md.'
+          exit 1
 
       - name: Add Azure deployment link to run summary
         env:

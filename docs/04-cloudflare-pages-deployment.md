@@ -87,11 +87,11 @@ git commit -m "Add Cloudflare Pages staging deployment"
 git push origin master
 ```
 
-In [GitHub Actions](https://github.com/Mental-NV/CodeflowFM/actions), open **Cloudflare Pages** and watch **Test and build**, followed by **Deploy production** on `master` or **Deploy staging** on a PR. The first job runs all tests, builds `dist/`, and saves it as a workflow artifact. Deployment jobs require that job to succeed and upload that exact artifact. Any failed test or build stops deployment. No `npm install` is needed for the dependency-free app; the Wrangler action installs its own deployment CLI.
+In [GitHub Actions](https://github.com/Mental-NV/CodeflowFM/actions), open **Static web app CD** and watch **Test and build**, followed by **Deploy production** on `master` or **Deploy staging** on a PR. The first job runs all tests, builds `dist/`, and saves it as a workflow artifact. Deployment jobs require that job to succeed and upload that exact artifact. Any failed test or build stops deployment. No `npm install` is needed for the dependency-free app; the Wrangler action installs its own deployment CLI. The workflow also includes an independent [Azure App Service production deployment](05-azure-app-service-deployment.md).
 
 After a successful deployment, open **https://codeflowfm.pages.dev/** and click **Future Garage**. Verify playback, pause/resume, volume/mute, and persistence after reloading. The workflow's run summary includes the production link; the Cloudflare project shows deployment status and history.
 
-To deploy manually after the workflow is on the default branch: **Actions → Cloudflare Pages → Run workflow → Branch: master → Run workflow**. Selecting another branch runs checks but does not publish production.
+To deploy manually after the workflow is on the default branch: **Actions → Static web app CD → Run workflow → Branch: master → Run workflow**. Selecting another branch runs checks but does not publish production.
 
 ## Subsequent changes
 

@@ -1,4 +1,4 @@
-name: Cloudflare Pages
+name: Static web app CD
 
 on:
   push:
@@ -149,3 +149,79 @@ jobs:
         if: steps.deploy.outcome == 'success'
         run: |
           printf '%s\n' 'Production: https://codeflowfm.pages.dev/' >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-azure:
+    name: Deploy production to Azure App Service
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: azure-production
+      url: ${{ steps.deploy.outputs.webapp-url }}
+    concurrency:
+      group: azure-app-service-production
+      cancel-in-progress: false
+    env:
+      # Set these repository Actions variables; see docs/05-azure-app-service-deployment.md.
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+    steps:
+      - name: Check Azure deployment configuration
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          missing=0
+          for setting in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_WEBAPP_NAME; do
+            if [[ -z "${!setting}" ]]; then
+              echo "::error::Set $setting in repository Actions settings. See docs/05-azure-app-service-deployment.md."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Download tested build
+        uses: actions/download-artifact@v8
+        with:
+          name: static-app
+          path: dist/
+
+      - name: Log in to Azure with OpenID Connect
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure static hosting on Windows App Service
+        run: |
+          is_linux=$(az webapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --query reserved --output tsv)
+          if [[ "$is_linux" != 'false' ]]; then
+            echo '::error::This deployment requires a Windows (Code/IIS) App Service. See docs/05-azure-app-service-deployment.md.'
+            exit 1
+          fi
+          # Serve the prebuilt files directly; do not run a server-side build.
+          az webapp config appsettings set \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=1 \
+            --output none
+
+      - name: Deploy static files to Azure App Service
+        id: deploy
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          resource-group-name: ${{ env.AZURE_RESOURCE_GROUP }}
+          package: dist/
+
+      - name: Add Azure deployment link to run summary
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.webapp-url }}
+        run: |
+          printf 'Azure App Service: %s\n' "$DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"

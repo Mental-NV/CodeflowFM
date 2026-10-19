@@ -35,6 +35,12 @@ Successful pushes or merges to `master` deploy production at **https://codeflowf
 
 Follow the [Cloudflare Pages setup guide](docs/04-cloudflare-pages-deployment.md) to register production, create an API token, and add the `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` GitHub repository secrets. The staging job creates its Cloudflare project automatically on the first eligible PR. The workflow also supports manual production deployment from the Actions tab.
 
+### Deploy to Azure App Service
+
+The same **Static web app CD** workflow also deploys the tested `dist/` artifact to a **Windows App Service (Code/IIS)** on pushes/merges to `master` and manual runs on `master`. IIS serves the static client directly. Azure deployment runs alongside Cloudflare production; PR staging remains on Cloudflare.
+
+Follow the [Azure App Service setup guide](docs/05-azure-app-service-deployment.md) to provision the target and configure OIDC authentication. Supply the `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` Actions secrets, plus the `AZURE_RESOURCE_GROUP` and `AZURE_WEBAPP_NAME` Actions variables. Deployment requires these prerequisites; the workflow does not create Azure resources.
+
 ## Listening behavior
 
 - Clicking a station starts playback from the current point in its repeating schedule. The playlist's `generatedAt` timestamp anchors that schedule, and `durationSec` locates the track and offset. Listeners with accurate clocks tune into approximately the same point.
